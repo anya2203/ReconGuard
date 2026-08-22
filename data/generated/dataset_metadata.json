@@ -1,0 +1,53 @@
+{
+  "dataset_version": "v1.0.0",
+  "seed": 42,
+  "anchor_datetime": "2026-08-01T00:00:00+00:00",
+  "total_cases": 1000,
+  "scenario_counts": {
+    "EXACT_MATCH": 720,
+    "MULTI_ORDER_SETTLEMENT": 60,
+    "AMOUNT_MISMATCH": 30,
+    "DELAYED_SETTLEMENT": 30,
+    "MISSING_PAYMENT": 30,
+    "CHARGEBACK_ADJUSTMENT": 30,
+    "ROUNDING_MISMATCH": 20,
+    "REFERENCE_TYPO": 20,
+    "MISSING_INVOICE": 10,
+    "AMBIGUOUS_CANDIDATE": 20,
+    "INSUFFICIENT_EVIDENCE": 20,
+    "MISSING_SETTLEMENT": 10
+  },
+  "distribution": {
+    "deterministic_resolution": {
+      "count": 780,
+      "percentage": 78.0,
+      "target_percentage": 78.0
+    },
+    "deterministic_escalation": {
+      "count": 120,
+      "percentage": 12.0,
+      "target_percentage": 12.0
+    },
+    "ai_investigation": {
+      "count": 100,
+      "percentage": 10.0,
+      "target_percentage": 10.0,
+      "ai_resolvable": {
+        "count": 50,
+        "percentage": 5.0
+      },
+      "ai_escalation": {
+        "count": 50,
+        "percentage": 5.0
+      }
+    }
+  },
+  "table_record_counts": {
+    "orders": 1000,
+    "payments": 970,
+    "settlements": 900,
+    "invoices": 970,
+    "adjustments": 50,
+    "ground_truth": 1000
+  }
+}
