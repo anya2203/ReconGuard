@@ -1,9 +1,14 @@
 from datetime import datetime, timezone
+from typing import TYPE_CHECKING
 
 from sqlalchemy import DateTime, Float, ForeignKey, String
-from sqlalchemy.orm import Mapped, mapped_column
+from sqlalchemy.orm import Mapped, mapped_column, relationship
 
 from app.database import Base
+
+if TYPE_CHECKING:
+    from app.models.reconciliation_case_payment import ReconciliationCasePayment
+    from app.models.reconciliation_case_settlement import ReconciliationCaseSettlement
 
 
 class ReconciliationCase(Base):
@@ -61,4 +66,17 @@ class ReconciliationCase(Base):
 
     resolved_at: Mapped[datetime | None] = mapped_column(
         DateTime, nullable=True
+    )
+
+    # 1:N Junction Relationships
+    case_payments: Mapped[list["ReconciliationCasePayment"]] = relationship(
+        "ReconciliationCasePayment",
+        back_populates="reconciliation_case",
+        cascade="all, delete-orphan",
+    )
+
+    case_settlements: Mapped[list["ReconciliationCaseSettlement"]] = relationship(
+        "ReconciliationCaseSettlement",
+        back_populates="reconciliation_case",
+        cascade="all, delete-orphan",
     )

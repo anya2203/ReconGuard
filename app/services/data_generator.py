@@ -5,7 +5,7 @@ evaluation datasets for the Razorpay Buildathon 2026.
 
 Key Target Distribution (1,000 cases):
 - ~78% Deterministic Resolution (780 cases)
-- ~12% Deterministic Escalation (120 cases)
+- ~12% Deterministic Escalation (120 cases across 5 scenarios including REFUND)
 - ~10% AI Investigation (100 cases: 50 AI-Resolvable, 50 AI-Escalation)
 """
 
@@ -27,7 +27,7 @@ from typing import Any
 
 DEFAULT_SEED = 42
 DEFAULT_TOTAL_CASES = 1000
-DATASET_VERSION = "v1.0.0"
+DATASET_VERSION = "v1.1.0"
 DEFAULT_ANCHOR_DATETIME = datetime(2026, 8, 1, 0, 0, 0, tzinfo=timezone.utc)
 
 # Realistic INR transaction amounts
@@ -67,6 +67,7 @@ class ScenarioType(str, Enum):
     DELAYED_SETTLEMENT = "DELAYED_SETTLEMENT"
     MISSING_PAYMENT = "MISSING_PAYMENT"
     CHARGEBACK_ADJUSTMENT = "CHARGEBACK_ADJUSTMENT"
+    REFUND = "REFUND"
     ROUNDING_MISMATCH = "ROUNDING_MISMATCH"
     REFERENCE_TYPO = "REFERENCE_TYPO"
     MISSING_INVOICE = "MISSING_INVOICE"
@@ -169,6 +170,8 @@ class GroundTruthRecord:
     expected_confidence_band: str
     expected_financial_impact: float
     notes: str
+    linked_payment_ids: list[str]
+    linked_settlement_ids: list[str]
 
 
 # ============================================================================
@@ -244,15 +247,16 @@ class ReconciliationDataGenerator:
         self._invoice_counter = 0
         self._adjustment_counter = 0
 
-        # Scenario distribution for 1,000 cases:
+        # Scenario distribution for 1,000 cases (13 scenarios):
         # Group 1: Deterministic Resolution (~78% -> 780 cases)
         # - EXACT_MATCH: 720 cases
         # - MULTI_ORDER_SETTLEMENT: 60 cases (20 batches of 3 orders)
         # Group 2: Deterministic Escalation (~12% -> 120 cases)
-        # - AMOUNT_MISMATCH: 30 cases
-        # - DELAYED_SETTLEMENT: 30 cases
-        # - MISSING_PAYMENT: 30 cases
-        # - CHARGEBACK_ADJUSTMENT: 30 cases
+        # - AMOUNT_MISMATCH: 24 cases
+        # - DELAYED_SETTLEMENT: 24 cases
+        # - MISSING_PAYMENT: 24 cases
+        # - CHARGEBACK_ADJUSTMENT: 24 cases
+        # - REFUND: 24 cases
         # Group 3: AI Investigation (~10% -> 100 cases)
         # Group 3A: AI-Resolvable (50 cases)
         # - ROUNDING_MISMATCH: 20 cases
@@ -263,22 +267,23 @@ class ReconciliationDataGenerator:
         # - INSUFFICIENT_EVIDENCE: 20 cases
         # - MISSING_SETTLEMENT: 10 cases
 
-        # 1. Deterministic Resolution
+        # 1. Deterministic Resolution (780 cases / 78.0%)
         self._generate_exact_matches(720)
         self._generate_multi_order_settlements(60, batch_size=3)
 
-        # 2. Deterministic Escalation
-        self._generate_amount_mismatches(30)
-        self._generate_delayed_settlements(30)
-        self._generate_missing_payments(30)
-        self._generate_chargeback_adjustments(30)
+        # 2. Deterministic Escalation (120 cases / 12.0%)
+        self._generate_amount_mismatches(24)
+        self._generate_delayed_settlements(24)
+        self._generate_missing_payments(24)
+        self._generate_chargeback_adjustments(24)
+        self._generate_refunds(24)
 
-        # 3A. AI-Resolvable
+        # 3A. AI-Resolvable (50 cases / 5.0%)
         self._generate_rounding_mismatches(20)
         self._generate_reference_typos(20)
         self._generate_missing_invoices(10)
 
-        # 3B. AI-Escalation
+        # 3B. AI-Escalation (50 cases / 5.0%)
         self._generate_ambiguous_candidates(20)
         self._generate_insufficient_evidence(20)
         self._generate_missing_settlements(10)
@@ -385,6 +390,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=0.0,
                     notes="Standard exact 1:1 match across order, payment, settlement, and invoice within T+1 SLA.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -397,6 +404,7 @@ class ReconciliationDataGenerator:
             batch_orders: list[tuple[str, str, float, datetime, datetime]] = []
             total_batch_amount = 0.0
             total_batch_fees = 0.0
+            settle_id = f"SET-BATCH-{batch_num:04d}"
 
             # Generate individual orders and payments in this batch
             for _ in range(batch_size):
@@ -472,6 +480,8 @@ class ReconciliationDataGenerator:
                         expected_confidence_band=ConfidenceBand.HIGH.value,
                         expected_financial_impact=0.0,
                         notes=f"Order reconciled as part of multi-order settlement batch {batch_utr}.",
+                        linked_payment_ids=[pay_id],
+                        linked_settlement_ids=[settle_id],
                     )
                 )
 
@@ -479,7 +489,6 @@ class ReconciliationDataGenerator:
 
             # Single aggregated Settlement for the entire batch
             self._settlement_counter += 1
-            settle_id = f"SET-BATCH-{batch_num:04d}"
             batch_settle_dt = max(p[4] for p in batch_orders) + timedelta(
                 days=1, hours=2
             )
@@ -576,6 +585,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=diff,
                     notes=f"Order amount INR {order_amount} does not match captured payment INR {payment_amount}.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -658,6 +669,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=0.0,
                     notes="Bank settlement completed 7 days after payment, exceeding policy SLA limit of 5 days.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -712,11 +725,13 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=amount,
                     notes="Merchant order completed with invoice but zero payment captured from gateway.",
+                    linked_payment_ids=[],
+                    linked_settlement_ids=[],
                 )
             )
 
     def _generate_chargeback_adjustments(self, count: int):
-        """Scenario 8: Chargeback or clawback adjustment applied to payment."""
+        """Scenario 8: Chargeback or dispute adjustment applied to payment."""
         for _ in range(count):
             self._case_counter += 1
             idx = self._case_counter
@@ -808,7 +823,108 @@ class ReconciliationDataGenerator:
                     expected_ai_investigation=False,
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=amount,
-                    notes=f"Chargeback adjustment of INR {amount} logged for payment {pay_id}.",
+                    notes=f"Chargeback adjustment of INR {amount:.2f} logged for payment {pay_id}.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
+                )
+            )
+
+    def _generate_refunds(self, count: int):
+        """Scenario: Merchant/customer refund processed with adjustment."""
+        for _ in range(count):
+            self._case_counter += 1
+            idx = self._case_counter
+            order_id = f"ORD-{idx:06d}"
+            gt_id = f"GT-{idx:06d}"
+            customer_id = f"CUST-{(idx % 150) + 1:04d}"
+            amount = self.rng.choice(REALISTIC_AMOUNTS)
+            method = "UPI"
+
+            order_dt = self.anchor_datetime + timedelta(
+                days=(idx * 3) % 22, hours=13, minutes=15
+            )
+            pay_dt = order_dt + timedelta(minutes=5)
+            inv_dt = order_dt + timedelta(minutes=1)
+            settle_dt = pay_dt + timedelta(days=1)
+            adj_dt = pay_dt + timedelta(days=2, hours=6)
+            utr = f"UTR-IND-{idx:08d}"
+            fee = self._calc_fee(amount)
+
+            self.orders.append(
+                OrderRecord(
+                    order_id=order_id,
+                    customer_id=customer_id,
+                    amount=amount,
+                    currency="INR",
+                    created_at=self._format_time(order_dt),
+                    status="COMPLETED",
+                )
+            )
+            self._payment_counter += 1
+            pay_id = f"PAY-{self._payment_counter:06d}"
+            self.payments.append(
+                PaymentRecord(
+                    payment_id=pay_id,
+                    order_id=order_id,
+                    amount=amount,
+                    method=method,
+                    utr=utr,
+                    created_at=self._format_time(pay_dt),
+                    status="SUCCESS",
+                )
+            )
+            self._settlement_counter += 1
+            settle_id = f"SET-{self._settlement_counter:06d}"
+            self.settlements.append(
+                SettlementRecord(
+                    settlement_id=settle_id,
+                    utr=utr,
+                    amount=round(amount - fee, 2),
+                    fees=fee,
+                    settled_at=self._format_time(settle_dt),
+                )
+            )
+            self._invoice_counter += 1
+            inv_id = f"INV-{self._invoice_counter:06d}"
+            self.invoices.append(
+                InvoiceRecord(
+                    invoice_id=inv_id,
+                    order_id=order_id,
+                    amount=amount,
+                    tax_lines_json=self._calc_tax_lines(amount),
+                    created_at=self._format_time(inv_dt),
+                )
+            )
+
+            # Refund adjustment record
+            self._adjustment_counter += 1
+            adj_id = f"ADJ-{self._adjustment_counter:06d}"
+            self.adjustments.append(
+                AdjustmentRecord(
+                    adjustment_id=adj_id,
+                    related_id=pay_id,
+                    type="REFUND",
+                    amount=-amount,
+                    reason="Merchant approved refund: goods returned by customer",
+                    created_at=self._format_time(adj_dt),
+                )
+            )
+
+            self.ground_truth.append(
+                GroundTruthRecord(
+                    ground_truth_id=gt_id,
+                    order_id=order_id,
+                    expected_scenario=ScenarioType.REFUND.value,
+                    expected_outcome=ExpectedOutcome.ADJUSTED.value,
+                    expected_resolution_class=ResolutionClass.DETERMINISTIC_ESCALATION.value,
+                    expected_root_cause="CUSTOMER_REFUND_PROCESSED_REQUIRES_RECON",
+                    expected_human_escalation=True,
+                    expected_ai_investigation=False,
+                    expected_confidence_band=ConfidenceBand.HIGH.value,
+                    expected_financial_impact=amount,
+                    notes=f"Full refund adjustment of INR {amount:.2f} processed for payment {pay_id}.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -894,6 +1010,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=diff,
                     notes="Micro-discrepancy (INR 0.05) caused by itemized GST line rounding; AI can verify invoice tax lines.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -980,6 +1098,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.MEDIUM.value,
                     expected_financial_impact=0.0,
                     notes=f"Bank settlement UTR has transposed characters ({settle_utr} vs {pay_utr}); AI can reconstruct 1:1 match.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -1052,6 +1172,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.HIGH.value,
                     expected_financial_impact=0.0,
                     notes="Payment and settlement matched; invoice dropped by billing worker; AI can confirm validity for backfill.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -1140,6 +1262,7 @@ class ReconciliationDataGenerator:
             )
 
             # AI-Escalation ground truth ("AI knows when it doesn't know")
+            # Links to BOTH candidate payment IDs
             self.ground_truth.append(
                 GroundTruthRecord(
                     ground_truth_id=gt_id,
@@ -1153,6 +1276,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.LOW.value,
                     expected_financial_impact=amount,
                     notes=f"Two successful gateway payments ({pay_id1}, {pay_id2}) exist for same order; AI must escalate to ops.",
+                    linked_payment_ids=[pay_id1, pay_id2],
+                    linked_settlement_ids=[settle_id],
                 )
             )
 
@@ -1209,6 +1334,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.NONE.value,
                     expected_financial_impact=amount,
                     notes="Abandoned order with unlinked manual debit; insufficient evidence across all sources; AI safely escalates.",
+                    linked_payment_ids=[],
+                    linked_settlement_ids=[],
                 )
             )
 
@@ -1280,6 +1407,8 @@ class ReconciliationDataGenerator:
                     expected_confidence_band=ConfidenceBand.MEDIUM.value,
                     expected_financial_impact=amount,
                     notes="Payment captured with UTR but settlement payout not acknowledged by bank; AI routes to banking operations.",
+                    linked_payment_ids=[pay_id],
+                    linked_settlement_ids=[],
                 )
             )
 
@@ -1448,16 +1577,19 @@ class ReconciliationDataGenerator:
             f.write(
                 "ground_truth_id,order_id,expected_scenario,expected_outcome,"
                 "expected_resolution_class,expected_root_cause,expected_human_escalation,"
-                "expected_ai_investigation,expected_confidence_band,expected_financial_impact,notes\n"
+                "expected_ai_investigation,expected_confidence_band,expected_financial_impact,"
+                "linked_payment_ids,linked_settlement_ids,notes\n"
             )
             for gt in self.ground_truth:
                 notes_escaped = gt.notes.replace('"', '""')
+                linked_pays = ";".join(gt.linked_payment_ids)
+                linked_settles = ";".join(gt.linked_settlement_ids)
                 f.write(
                     f'{gt.ground_truth_id},{gt.order_id},{gt.expected_scenario},'
                     f'{gt.expected_outcome},{gt.expected_resolution_class},'
                     f'{gt.expected_root_cause},{gt.expected_human_escalation},'
                     f'{gt.expected_ai_investigation},{gt.expected_confidence_band},'
-                    f'{gt.expected_financial_impact:.2f},"{notes_escaped}"\n'
+                    f'{gt.expected_financial_impact:.2f},"{linked_pays}","{linked_settles}","{notes_escaped}"\n'
                 )
 
         # 7. Save Ground Truth JSON
@@ -1633,7 +1765,7 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
         except Exception:
             errors.append(f"Invalid tax_lines_json for invoice: {iid}")
 
-    # 6. Validate Adjustments CSV
+    # 6. Validate Adjustments CSV & Refund Rows
     adj_headers, adj_rows = parse_csv_rows(gen_dir / "adjustments.csv")
     expected_adj_cols = [
         "adjustment_id",
@@ -1649,11 +1781,19 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
         )
 
     adj_ids = set()
+    has_refund_adjustment = False
     for row in adj_rows:
         aid = row["adjustment_id"]
         if aid in adj_ids:
             errors.append(f"Duplicate adjustment_id found: {aid}")
         adj_ids.add(aid)
+        if row["type"] == "REFUND":
+            has_refund_adjustment = True
+            if float(row["amount"]) >= 0:
+                errors.append(f"Refund adjustment {aid} should have negative amount, got {row['amount']}")
+
+    if not has_refund_adjustment:
+        errors.append("No REFUND type adjustments found in adjustments.csv")
 
     # 7. Validate Settlements CSV
     settle_headers, settle_rows = parse_csv_rows(gen_dir / "settlements.csv")
@@ -1672,7 +1812,7 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
         settle_ids.add(sid)
         settle_utrs.add(row["utr"])
 
-    # 8. Validate Ground Truth CSV
+    # 8. Validate Ground Truth CSV & Linked IDs
     gt_headers, gt_rows = parse_csv_rows(gt_dir / "ground_truth.csv")
     expected_gt_cols = [
         "ground_truth_id",
@@ -1685,6 +1825,8 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
         "expected_ai_investigation",
         "expected_confidence_band",
         "expected_financial_impact",
+        "linked_payment_ids",
+        "linked_settlement_ids",
         "notes",
     ]
     if gt_headers != expected_gt_cols:
@@ -1698,6 +1840,7 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
     resolution_counts: dict[str, int] = {}
     ai_resolvable_count = 0
     ai_escalation_count = 0
+    multi_payment_cases_found = 0
 
     for idx, row in enumerate(gt_rows, start=1):
         gid = row["ground_truth_id"]
@@ -1715,6 +1858,23 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
                 f"Ground truth references non-existent order_id: {oid} in {gid}"
             )
         gt_order_ids.add(oid)
+
+        # Linked Payment IDs Validation
+        linked_pays_raw = row.get("linked_payment_ids", "")
+        linked_pays = [p.strip() for p in linked_pays_raw.split(";") if p.strip()]
+        for pid in linked_pays:
+            if pid not in payment_ids:
+                errors.append(f"Ground truth {gid} references non-existent linked payment: {pid}")
+
+        if len(linked_pays) >= 2:
+            multi_payment_cases_found += 1
+
+        # Linked Settlement IDs Validation
+        linked_settles_raw = row.get("linked_settlement_ids", "")
+        linked_settles = [s.strip() for s in linked_settles_raw.split(";") if s.strip()]
+        for sid in linked_settles:
+            if sid not in settle_ids:
+                errors.append(f"Ground truth {gid} references non-existent linked settlement: {sid}")
 
         scen = row["expected_scenario"]
         scenario_counts[scen] = scenario_counts.get(scen, 0) + 1
@@ -1792,12 +1952,16 @@ def validate_dataset(base_data_dir: Path | str | None = None) -> tuple[bool, lis
             "No multi-order settlement batch UTR with >= 2 payments was found"
         )
 
-    # 12. Verify All 12 Scenarios Are Present
+    # 12. Verify Multi-Payment cases exist in Ground Truth (e.g. AMBIGUOUS_CANDIDATE)
+    if multi_payment_cases_found == 0:
+        errors.append("No ground truth cases found with multiple linked payment IDs")
+
+    # 13. Verify All 13 Scenarios (including REFUND) Are Present
     for scen in ScenarioType:
         if scen.value not in scenario_counts or scenario_counts[scen.value] == 0:
             errors.append(f"Scenario {scen.value} has 0 cases in ground truth")
 
-    # 13. Verify Timestamps derive from Anchor Date (no dates before anchor)
+    # 14. Verify Timestamps derive from Anchor Date (no dates before anchor)
     anchor_iso = DEFAULT_ANCHOR_DATETIME.isoformat()
     for row in orders_rows:
         if row["created_at"] < anchor_iso:
@@ -1896,7 +2060,7 @@ def main():
                 f"  - {key:<26}: {val['count']:>4} cases ({val['percentage']:>5.1f}%) [Target: {val['target_percentage']} %]"
             )
 
-    print("\nScenario Breakdown (12 Scenarios):")
+    print("\nScenario Breakdown (13 Scenarios):")
     for scen, count in summary["scenario_counts"].items():
         print(f"  - {scen:<30}: {count:>4} cases")
 

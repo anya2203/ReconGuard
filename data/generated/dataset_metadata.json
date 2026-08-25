@@ -1,15 +1,16 @@
 {
-  "dataset_version": "v1.0.0",
+  "dataset_version": "v1.1.0",
   "seed": 42,
   "anchor_datetime": "2026-08-01T00:00:00+00:00",
   "total_cases": 1000,
   "scenario_counts": {
     "EXACT_MATCH": 720,
     "MULTI_ORDER_SETTLEMENT": 60,
-    "AMOUNT_MISMATCH": 30,
-    "DELAYED_SETTLEMENT": 30,
-    "MISSING_PAYMENT": 30,
-    "CHARGEBACK_ADJUSTMENT": 30,
+    "AMOUNT_MISMATCH": 24,
+    "DELAYED_SETTLEMENT": 24,
+    "MISSING_PAYMENT": 24,
+    "CHARGEBACK_ADJUSTMENT": 24,
+    "REFUND": 24,
     "ROUNDING_MISMATCH": 20,
     "REFERENCE_TYPO": 20,
     "MISSING_INVOICE": 10,
@@ -44,10 +45,10 @@
   },
   "table_record_counts": {
     "orders": 1000,
-    "payments": 970,
-    "settlements": 900,
+    "payments": 976,
+    "settlements": 906,
     "invoices": 970,
-    "adjustments": 50,
+    "adjustments": 68,
     "ground_truth": 1000
   }
 }

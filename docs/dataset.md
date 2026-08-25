@@ -12,8 +12,8 @@ Reconciliation in production fintech systems requires evaluating both high-volum
 - **Payments**: Gateway payment capture records with UTR identifiers.
 - **Settlements**: Bank payout records and batched settlements.
 - **Invoices**: Tax and billing records with itemized GST lines.
-- **Adjustments**: Chargebacks, refunds, and fee adjustments.
-- **Ground Truth**: Fixed evaluation labels joining directly on business identifiers (`order_id`).
+- **Adjustments**: Chargebacks, refunds, dispute fees, and rounding adjustments.
+- **Ground Truth**: Fixed evaluation labels joining directly on business identifiers (`order_id`) with explicit linked payment and settlement IDs.
 
 ---
 
@@ -31,7 +31,7 @@ Running the generator multiple times with the same seed produces identical datas
 
 ## 3. Target Distribution (78 / 12 / 10 Split)
 
-For a benchmark size of **1,000 cases**, the dataset adheres to the target distribution:
+For a benchmark size of **1,000 cases**, the dataset adheres strictly to the target distribution across 13 distinct scenarios:
 
 | Resolution Category | Target % | Exact Cases | Actual % | Primary Handler |
 |---|---|---|---|---|
@@ -58,22 +58,23 @@ The **100 AI Investigation cases** are split into two 50-case subcategories:
 
 ---
 
-## 5. Scenario Taxonomy (12 Scenarios)
+## 5. Scenario Taxonomy (13 Scenarios)
 
 | # | Scenario Name | Category | Cases | Outcome | Human Escalation | Description |
 |---|---|---|---|---|---|---|
 | 1 | `EXACT_MATCH` | Deterministic Resolution | 720 | `MATCHED` | `False` | 1:1 clean match across order, payment, settlement (T+1 SLA), and invoice. |
 | 2 | `MULTI_ORDER_SETTLEMENT` | Deterministic Resolution | 60 | `MATCHED` | `False` | 20 batches of 3 orders consolidated under single bank settlement UTRs. |
-| 3 | `AMOUNT_MISMATCH` | Deterministic Escalation | 30 | `DISCREPANCY_FOUND` | `True` | Payment amount significantly differs from order (e.g. ₹4,999 vs ₹3,499). |
-| 4 | `DELAYED_SETTLEMENT` | Deterministic Escalation | 30 | `DISCREPANCY_FOUND` | `True` | Settlement completed 7 days after payment, exceeding policy SLA (5 days). |
-| 5 | `MISSING_PAYMENT` | Deterministic Escalation | 30 | `UNMATCHED` | `True` | Fulfilled order has invoice but zero gateway payment was captured. |
-| 6 | `CHARGEBACK_ADJUSTMENT` | Deterministic Escalation | 30 | `ADJUSTED` | `True` | Bank dispute/chargeback logged against captured payment. |
-| 7 | `ROUNDING_MISMATCH` | AI Investigation (Resolvable) | 20 | `DISCREPANCY_FOUND` | `False` | Micro-variance (₹0.05) due to itemized GST line rounding; AI explains root cause. |
-| 8 | `REFERENCE_TYPO` | AI Investigation (Resolvable) | 20 | `DISCREPANCY_FOUND` | `False` | Gateway UTR has transposed characters (e.g. `...12` vs `...21`); AI reconstructs match. |
-| 9 | `MISSING_INVOICE` | AI Investigation (Resolvable) | 10 | `DISCREPANCY_FOUND` | `False` | Payment & settlement matched; invoice generation failed; AI verifies for backfill. |
-| 10 | `AMBIGUOUS_CANDIDATE` | AI Investigation (Escalation) | 20 | `DISCREPANCY_FOUND` | `True` | Multiple successful payments exist for same order (retry); AI routes to ops. |
-| 11 | `INSUFFICIENT_EVIDENCE` | AI Investigation (Escalation) | 20 | `UNMATCHED` | `True` | Abandoned order with unlinked manual debit; AI identifies missing context and escalates. |
-| 12 | `MISSING_SETTLEMENT` | AI Investigation (Escalation) | 10 | `DISCREPANCY_FOUND` | `True` | Payment captured but payout record missing from bank feed; AI flags for banking ops. |
+| 3 | `AMOUNT_MISMATCH` | Deterministic Escalation | 24 | `DISCREPANCY_FOUND` | `True` | Payment amount significantly differs from order (e.g. ₹4,999 vs ₹3,499). |
+| 4 | `DELAYED_SETTLEMENT` | Deterministic Escalation | 24 | `DISCREPANCY_FOUND` | `True` | Settlement completed 7 days after payment, exceeding policy SLA (5 days). |
+| 5 | `MISSING_PAYMENT` | Deterministic Escalation | 24 | `UNMATCHED` | `True` | Fulfilled order has invoice but zero gateway payment was captured. |
+| 6 | `CHARGEBACK_ADJUSTMENT` | Deterministic Escalation | 24 | `ADJUSTED` | `True` | Bank dispute/chargeback logged against captured payment. |
+| 7 | `REFUND` | Deterministic Escalation | 24 | `ADJUSTED` | `True` | Merchant-approved refund adjustment logged against captured payment. |
+| 8 | `ROUNDING_MISMATCH` | AI Investigation (Resolvable) | 20 | `DISCREPANCY_FOUND` | `False` | Micro-variance (₹0.05) due to itemized GST line rounding; AI explains root cause. |
+| 9 | `REFERENCE_TYPO` | AI Investigation (Resolvable) | 20 | `DISCREPANCY_FOUND` | `False` | Gateway UTR has transposed characters (e.g. `...12` vs `...21`); AI reconstructs match. |
+| 10 | `MISSING_INVOICE` | AI Investigation (Resolvable) | 10 | `DISCREPANCY_FOUND` | `False` | Payment & settlement matched; invoice generation failed; AI verifies for backfill. |
+| 11 | `AMBIGUOUS_CANDIDATE` | AI Investigation (Escalation) | 20 | `DISCREPANCY_FOUND` | `True` | Multiple successful payments exist for same order (retry); AI routes to ops. |
+| 12 | `INSUFFICIENT_EVIDENCE` | AI Investigation (Escalation) | 20 | `UNMATCHED` | `True` | Abandoned order with unlinked manual debit; AI identifies missing context and escalates. |
+| 13 | `MISSING_SETTLEMENT` | AI Investigation (Escalation) | 10 | `DISCREPANCY_FOUND` | `True` | Payment captured but payout record missing from bank feed; AI flags for banking ops. |
 
 ---
 
@@ -88,8 +89,14 @@ In real-world payment aggregation, payment aggregators settle multiple payments 
 
 ---
 
-## 7. Relational Schema Integrity & Orphan Handling
+## 7. Relational Schema Integrity, Junction Tables, & Orphan Handling
 
+### Junction Tables for 1:N Cardinality
+To naturally support 1:N cases (such as multi-order settlements, duplicate retry payments, or split payout settlements), ReconGuard uses relational junction models:
+- `reconciliation_case_payments`: Junction between `reconciliation_cases` and `payments` with unique constraint `(case_id, payment_id)`.
+- `reconciliation_case_settlements`: Junction between `reconciliation_cases` and `settlements` with unique constraint `(case_id, settlement_id)`.
+
+### Foreign Key Integrity
 The database models (`Payment` and `Invoice`) enforce non-nullable foreign keys referencing `orders.order_id`. To preserve full referential integrity while representing orphan/missing-record scenarios:
 
 1. **Missing Payment / Missing Invoice / Missing Settlement**:
@@ -101,12 +108,12 @@ The database models (`Payment` and `Invoice`) enforce non-nullable foreign keys 
 
 ---
 
-## 8. Ground-Truth Data Schema
+## 8. Ground-Truth Data Schema & Linked IDs
 
 Ground truth is stored in `data/ground_truth/ground_truth.csv` and `data/ground_truth/ground_truth.json`:
 
 ```csv
-ground_truth_id,order_id,expected_scenario,expected_outcome,expected_resolution_class,expected_root_cause,expected_human_escalation,expected_ai_investigation,expected_confidence_band,expected_financial_impact,notes
+ground_truth_id,order_id,expected_scenario,expected_outcome,expected_resolution_class,expected_root_cause,expected_human_escalation,expected_ai_investigation,expected_confidence_band,expected_financial_impact,linked_payment_ids,linked_settlement_ids,notes
 ```
 
 - **`ground_truth_id`**: Dedicated namespace (`GT-000001` to `GT-001000`).
@@ -118,6 +125,8 @@ ground_truth_id,order_id,expected_scenario,expected_outcome,expected_resolution_
 - **`expected_ai_investigation`**: Boolean (`True` / `False`).
 - **`expected_confidence_band`**: `HIGH` \| `MEDIUM` \| `LOW` \| `NONE`.
 - **`expected_financial_impact`**: Numeric financial exposure amount in INR.
+- **`linked_payment_ids`**: Semicolon-separated list of expected payment IDs (e.g. `PAY-000001` or `PAY-000101;PAY-000102` or empty `""`).
+- **`linked_settlement_ids`**: Semicolon-separated list of expected settlement IDs (e.g. `SET-000001` or `SET-BATCH-0001` or empty `""`).
 
 ---
 
@@ -137,4 +146,3 @@ python -m app.services.data_generator --validate
 ```bash
 pytest -q
 ```
-

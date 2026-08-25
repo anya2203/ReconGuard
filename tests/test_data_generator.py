@@ -4,10 +4,12 @@ Verifies:
 - Deterministic generation & seed reproducibility
 - Ground-truth ID format (GT-XXXXXX) & uniqueness
 - Ground-truth referential join to business identifiers (order_id)
+- Ground-truth explicit linked payment/settlement IDs
 - Relational integrity across orders, payments, settlements, invoices, adjustments
 - Target distribution (78% deterministic resolution, 12% deterministic escalation, 10% AI investigation)
 - AI split (AI-resolvable vs AI-escalation)
 - Multi-order settlement batching
+- Refund scenario generation & adjustment records
 - Fixed anchor timestamp rules
 - Dataset validation logic and failure detection
 """
@@ -69,6 +71,11 @@ def test_deterministic_generation_same_seed():
     for s1, s2 in zip(gen1.settlements, gen2.settlements):
         assert s1 == s2
 
+    # Compare adjustments
+    assert len(gen1.adjustments) == len(gen2.adjustments)
+    for a1, a2 in zip(gen1.adjustments, gen2.adjustments):
+        assert a1 == a2
+
     # Compare ground truth
     assert len(gen1.ground_truth) == len(gen2.ground_truth)
     for gt1, gt2 in zip(gen1.ground_truth, gen2.ground_truth):
@@ -97,6 +104,21 @@ def test_ground_truth_joins_to_order_id(generator: ReconciliationDataGenerator):
         assert gt.order_id in order_ids, f"GT case {gt.ground_truth_id} has invalid order_id {gt.order_id}"
 
 
+def test_ground_truth_linked_ids_integrity(generator: ReconciliationDataGenerator):
+    """Verify ground truth contains valid explicit linked payment and settlement IDs."""
+    payment_ids = {p.payment_id for p in generator.payments}
+    settle_ids = {s.settlement_id for s in generator.settlements}
+
+    for gt in generator.ground_truth:
+        # All linked payment IDs must exist in payments
+        for pid in gt.linked_payment_ids:
+            assert pid in payment_ids, f"GT {gt.ground_truth_id} has invalid linked payment {pid}"
+
+        # All linked settlement IDs must exist in settlements
+        for sid in gt.linked_settlement_ids:
+            assert sid in settle_ids, f"GT {gt.ground_truth_id} has invalid linked settlement {sid}"
+
+
 def test_foreign_key_referential_integrity(generator: ReconciliationDataGenerator):
     """Verify that all child tables reference valid order IDs in the parent orders table."""
     order_ids = {o.order_id for o in generator.orders}
@@ -108,6 +130,33 @@ def test_foreign_key_referential_integrity(generator: ReconciliationDataGenerato
     # Invoices
     for inv in generator.invoices:
         assert inv.order_id in order_ids, f"Invoice {inv.invoice_id} references invalid order {inv.order_id}"
+
+
+def test_refund_scenario_and_adjustments(generator: ReconciliationDataGenerator):
+    """Verify that REFUND scenario is generated with proper operational and ground truth records."""
+    summary = generator.get_summary()
+    assert summary["scenario_counts"].get(ScenarioType.REFUND.value) == 24
+
+    refund_gts = [gt for gt in generator.ground_truth if gt.expected_scenario == ScenarioType.REFUND.value]
+    assert len(refund_gts) == 24
+
+    # Verify refund adjustments exist
+    refund_adjs = [adj for adj in generator.adjustments if adj.type == "REFUND"]
+    assert len(refund_adjs) == 24
+
+    payment_ids = {p.payment_id for p in generator.payments}
+    for adj in refund_adjs:
+        assert adj.amount < 0.0  # Must be negative amount representing refund
+        assert adj.related_id in payment_ids  # Must reference valid payment
+        assert "refund" in (adj.reason or "").lower()
+
+    for gt in refund_gts:
+        assert gt.expected_outcome == ExpectedOutcome.ADJUSTED.value
+        assert gt.expected_resolution_class == ResolutionClass.DETERMINISTIC_ESCALATION.value
+        assert gt.expected_human_escalation is True
+        assert gt.expected_ai_investigation is False
+        assert len(gt.linked_payment_ids) == 1
+        assert len(gt.linked_settlement_ids) == 1
 
 
 def test_target_distribution_and_percentages(generator: ReconciliationDataGenerator):
@@ -166,17 +215,18 @@ def test_ai_investigation_sub_split(generator: ReconciliationDataGenerator):
                 assert gt.expected_human_escalation is True
 
 
-def test_all_12_scenarios_covered(generator: ReconciliationDataGenerator):
-    """Verify all 12 defined scenarios are generated with correct case counts."""
+def test_all_13_scenarios_covered(generator: ReconciliationDataGenerator):
+    """Verify all 13 defined scenarios are generated with correct case counts."""
     counts = generator.get_summary()["scenario_counts"]
 
     expected_counts = {
         ScenarioType.EXACT_MATCH.value: 720,
         ScenarioType.MULTI_ORDER_SETTLEMENT.value: 60,
-        ScenarioType.AMOUNT_MISMATCH.value: 30,
-        ScenarioType.DELAYED_SETTLEMENT.value: 30,
-        ScenarioType.MISSING_PAYMENT.value: 30,
-        ScenarioType.CHARGEBACK_ADJUSTMENT.value: 30,
+        ScenarioType.AMOUNT_MISMATCH.value: 24,
+        ScenarioType.DELAYED_SETTLEMENT.value: 24,
+        ScenarioType.MISSING_PAYMENT.value: 24,
+        ScenarioType.CHARGEBACK_ADJUSTMENT.value: 24,
+        ScenarioType.REFUND.value: 24,
         ScenarioType.ROUNDING_MISMATCH.value: 20,
         ScenarioType.REFERENCE_TYPO.value: 20,
         ScenarioType.MISSING_INVOICE.value: 10,
@@ -185,7 +235,7 @@ def test_all_12_scenarios_covered(generator: ReconciliationDataGenerator):
         ScenarioType.MISSING_SETTLEMENT.value: 10,
     }
 
-    assert len(counts) == 12
+    assert len(counts) == 13
     for scenario_name, expected_count in expected_counts.items():
         assert counts.get(scenario_name) == expected_count, (
             f"Scenario {scenario_name} count {counts.get(scenario_name)} != {expected_count}"
@@ -208,6 +258,16 @@ def test_multi_order_settlement_batching(generator: ReconciliationDataGenerator)
 
         assert bs.amount == expected_net_settlement
         assert bs.fees == round(expected_fees, 2)
+
+
+def test_ambiguous_candidate_multiple_linked_payments(generator: ReconciliationDataGenerator):
+    """Verify ambiguous candidate cases link to multiple candidate payments in ground truth."""
+    ambig_gts = [gt for gt in generator.ground_truth if gt.expected_scenario == ScenarioType.AMBIGUOUS_CANDIDATE.value]
+    assert len(ambig_gts) == 20
+
+    for gt in ambig_gts:
+        assert len(gt.linked_payment_ids) == 2, f"Expected 2 candidate payments in GT {gt.ground_truth_id}"
+        assert len(gt.linked_settlement_ids) == 1
 
 
 def test_fixed_anchor_timestamps(generator: ReconciliationDataGenerator):
@@ -257,4 +317,3 @@ def test_cli_execution_and_validate_flag():
     )
     assert res_val.returncode == 0
     assert "Validation SUCCESSFUL" in res_val.stdout
-

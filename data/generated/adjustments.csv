@@ -1,51 +1,69 @@
 adjustment_id,related_id,type,amount,reason,created_at
-ADJ-000001,PAY-000841,CHARGEBACK,-299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000002,PAY-000842,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000003,PAY-000843,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000004,PAY-000844,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000005,PAY-000845,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000006,PAY-000846,CHARGEBACK,-25000.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000007,PAY-000847,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000008,PAY-000848,CHARGEBACK,-14999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000009,PAY-000849,CHARGEBACK,-1299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000010,PAY-000850,CHARGEBACK,-3499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000011,PAY-000851,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000012,PAY-000852,CHARGEBACK,-1999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000013,PAY-000853,CHARGEBACK,-49999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000014,PAY-000854,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000015,PAY-000855,CHARGEBACK,-1499.50,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000016,PAY-000856,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000017,PAY-000857,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000018,PAY-000858,CHARGEBACK,-3499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000019,PAY-000859,CHARGEBACK,-49999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000020,PAY-000860,CHARGEBACK,-2499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000021,PAY-000861,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000022,PAY-000862,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000023,PAY-000863,CHARGEBACK,-2999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000024,PAY-000864,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000025,PAY-000865,CHARGEBACK,-7500.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000026,PAY-000866,CHARGEBACK,-999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
-ADJ-000027,PAY-000867,CHARGEBACK,-1999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
-ADJ-000028,PAY-000868,CHARGEBACK,-1499.50,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
-ADJ-000029,PAY-000869,CHARGEBACK,-299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
-ADJ-000030,PAY-000870,CHARGEBACK,-25000.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
-ADJ-000031,ORD-000971,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
-ADJ-000032,ORD-000972,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
-ADJ-000033,ORD-000973,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
-ADJ-000034,ORD-000974,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
-ADJ-000035,ORD-000975,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
-ADJ-000036,ORD-000976,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
-ADJ-000037,ORD-000977,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
-ADJ-000038,ORD-000978,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
-ADJ-000039,ORD-000979,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
-ADJ-000040,ORD-000980,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
-ADJ-000041,ORD-000981,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
-ADJ-000042,ORD-000982,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
-ADJ-000043,ORD-000983,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
-ADJ-000044,ORD-000984,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
-ADJ-000045,ORD-000985,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
-ADJ-000046,ORD-000986,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
-ADJ-000047,ORD-000987,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
-ADJ-000048,ORD-000988,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
-ADJ-000049,ORD-000989,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
-ADJ-000050,ORD-000990,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
+ADJ-000001,PAY-000829,CHARGEBACK,-3499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
+ADJ-000002,PAY-000830,CHARGEBACK,-49999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
+ADJ-000003,PAY-000831,CHARGEBACK,-799.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
+ADJ-000004,PAY-000832,CHARGEBACK,-7500.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
+ADJ-000005,PAY-000833,CHARGEBACK,-2999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
+ADJ-000006,PAY-000834,CHARGEBACK,-2499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
+ADJ-000007,PAY-000835,CHARGEBACK,-49999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
+ADJ-000008,PAY-000836,CHARGEBACK,-1999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
+ADJ-000009,PAY-000837,CHARGEBACK,-25000.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
+ADJ-000010,PAY-000838,CHARGEBACK,-999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
+ADJ-000011,PAY-000839,CHARGEBACK,-1299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
+ADJ-000012,PAY-000840,CHARGEBACK,-3499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
+ADJ-000013,PAY-000841,CHARGEBACK,-299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
+ADJ-000014,PAY-000842,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
+ADJ-000015,PAY-000843,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
+ADJ-000016,PAY-000844,CHARGEBACK,-9999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
+ADJ-000017,PAY-000845,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
+ADJ-000018,PAY-000846,CHARGEBACK,-25000.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
+ADJ-000019,PAY-000847,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
+ADJ-000020,PAY-000848,CHARGEBACK,-14999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-13T16:35:00+00:00
+ADJ-000021,PAY-000849,CHARGEBACK,-1299.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-17T16:35:00+00:00
+ADJ-000022,PAY-000850,CHARGEBACK,-3499.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-21T16:35:00+00:00
+ADJ-000023,PAY-000851,CHARGEBACK,-4999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-05T16:35:00+00:00
+ADJ-000024,PAY-000852,CHARGEBACK,-1999.00,"Customer bank dispute: unauthorized transaction chargeback",2026-08-09T16:35:00+00:00
+ADJ-000025,PAY-000853,REFUND,-49999.00,"Merchant approved refund: goods returned by customer",2026-08-16T19:20:00+00:00
+ADJ-000026,PAY-000854,REFUND,-4999.00,"Merchant approved refund: goods returned by customer",2026-08-19T19:20:00+00:00
+ADJ-000027,PAY-000855,REFUND,-1499.50,"Merchant approved refund: goods returned by customer",2026-08-22T19:20:00+00:00
+ADJ-000028,PAY-000856,REFUND,-9999.00,"Merchant approved refund: goods returned by customer",2026-08-03T19:20:00+00:00
+ADJ-000029,PAY-000857,REFUND,-4999.00,"Merchant approved refund: goods returned by customer",2026-08-06T19:20:00+00:00
+ADJ-000030,PAY-000858,REFUND,-3499.00,"Merchant approved refund: goods returned by customer",2026-08-09T19:20:00+00:00
+ADJ-000031,PAY-000859,REFUND,-49999.00,"Merchant approved refund: goods returned by customer",2026-08-12T19:20:00+00:00
+ADJ-000032,PAY-000860,REFUND,-2499.00,"Merchant approved refund: goods returned by customer",2026-08-15T19:20:00+00:00
+ADJ-000033,PAY-000861,REFUND,-4999.00,"Merchant approved refund: goods returned by customer",2026-08-18T19:20:00+00:00
+ADJ-000034,PAY-000862,REFUND,-9999.00,"Merchant approved refund: goods returned by customer",2026-08-21T19:20:00+00:00
+ADJ-000035,PAY-000863,REFUND,-2999.00,"Merchant approved refund: goods returned by customer",2026-08-24T19:20:00+00:00
+ADJ-000036,PAY-000864,REFUND,-9999.00,"Merchant approved refund: goods returned by customer",2026-08-05T19:20:00+00:00
+ADJ-000037,PAY-000865,REFUND,-7500.00,"Merchant approved refund: goods returned by customer",2026-08-08T19:20:00+00:00
+ADJ-000038,PAY-000866,REFUND,-999.00,"Merchant approved refund: goods returned by customer",2026-08-11T19:20:00+00:00
+ADJ-000039,PAY-000867,REFUND,-1999.00,"Merchant approved refund: goods returned by customer",2026-08-14T19:20:00+00:00
+ADJ-000040,PAY-000868,REFUND,-1499.50,"Merchant approved refund: goods returned by customer",2026-08-17T19:20:00+00:00
+ADJ-000041,PAY-000869,REFUND,-299.00,"Merchant approved refund: goods returned by customer",2026-08-20T19:20:00+00:00
+ADJ-000042,PAY-000870,REFUND,-25000.00,"Merchant approved refund: goods returned by customer",2026-08-23T19:20:00+00:00
+ADJ-000043,PAY-000871,REFUND,-1999.00,"Merchant approved refund: goods returned by customer",2026-08-04T19:20:00+00:00
+ADJ-000044,PAY-000872,REFUND,-25000.00,"Merchant approved refund: goods returned by customer",2026-08-07T19:20:00+00:00
+ADJ-000045,PAY-000873,REFUND,-3499.00,"Merchant approved refund: goods returned by customer",2026-08-10T19:20:00+00:00
+ADJ-000046,PAY-000874,REFUND,-799.00,"Merchant approved refund: goods returned by customer",2026-08-13T19:20:00+00:00
+ADJ-000047,PAY-000875,REFUND,-14999.00,"Merchant approved refund: goods returned by customer",2026-08-16T19:20:00+00:00
+ADJ-000048,PAY-000876,REFUND,-49999.00,"Merchant approved refund: goods returned by customer",2026-08-19T19:20:00+00:00
+ADJ-000049,ORD-000971,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
+ADJ-000050,ORD-000972,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
+ADJ-000051,ORD-000973,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
+ADJ-000052,ORD-000974,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
+ADJ-000053,ORD-000975,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
+ADJ-000054,ORD-000976,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
+ADJ-000055,ORD-000977,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
+ADJ-000056,ORD-000978,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
+ADJ-000057,ORD-000979,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
+ADJ-000058,ORD-000980,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
+ADJ-000059,ORD-000981,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
+ADJ-000060,ORD-000982,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
+ADJ-000061,ORD-000983,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
+ADJ-000062,ORD-000984,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
+ADJ-000063,ORD-000985,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
+ADJ-000064,ORD-000986,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-08T20:45:00+00:00
+ADJ-000065,ORD-000987,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-13T20:45:00+00:00
+ADJ-000066,ORD-000988,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-18T20:45:00+00:00
+ADJ-000067,ORD-000989,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-23T20:45:00+00:00
+ADJ-000068,ORD-000990,DISPUTE_FEE,-250.00,"Manual ledger correction #994 without reference trace",2026-08-03T20:45:00+00:00
