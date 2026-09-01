@@ -213,7 +213,14 @@ class ReconciliationService:
 
         # Adjustments
         adjustments_res = self.tools.lookup_adjustments(order_id=order_id)
-        adjustments = adjustments_res.get("adjustments", [])
+        adjustments = list(adjustments_res.get("adjustments", []))
+        for p in payments:
+            pid = p.get("payment_id")
+            if pid:
+                p_adj = self.tools.lookup_adjustments(payment_id=pid)
+                for a in p_adj.get("adjustments", []):
+                    if a not in adjustments:
+                        adjustments.append(a)
 
         return {
             "case_id": case.case_id,
