@@ -4,7 +4,9 @@
 **Architecture Layer**: Agentic AI Investigator (`app/investigator/`)  
 **Evaluated Model**: `gemini-3.6-flash` (Google GenAI Live Endpoint)  
 **Target Scope**: 50 complex cases designated for `AI_INVESTIGATION` (20 Rounding Variances, 20 Reference Typos, 10 Missing Invoices)  
-**Safety & Compliance Status**: 100% Read-Only, 0 Unauthorized Actions, 0 Ground-Truth Leakage, 118/118 Tests Passing
+**Safety & Compliance Status**: 100% Read-Only, 0 Unauthorized Actions, 0 Ground-Truth Leakage, 141/141 Tests Passing *(current repository total; 118/118 at the time this benchmark was originally run on 2026-08-31, before the Day 7 API layer added 23 more tests — see `docs/day7_api.md`)*
+
+> **Model Configuration Note**: `gemini-3.6-flash` was selected for this benchmark by explicitly overriding the model via the `GEMINI_MODEL_NAME` environment variable (or the `GeminiProvider(model_name=...)` constructor argument). The repository's built-in default — used whenever no override is supplied — is `gemini-2.5-flash`. This benchmark does **not** describe the out-of-the-box default; see `app/investigator/providers.py` (`GeminiProvider._DEFAULT_MODEL_NAME`) and `.env.example` for the current configuration mechanism.
 
 ---
 
@@ -168,7 +170,7 @@ The evaluation produced a structured, machine-readable artifact at:
 ## 8. Test Results & Verification
 
 - **AI Investigator Test Suite (`tests/test_investigator.py`)**: `18 passed in 0.31s`
-- **Complete Test Suite (`pytest -q`)**: `118 passed in 6.70s`
+- **Complete Test Suite (`pytest -q`)**: `118 passed in 6.70s` *(historical record of the suite as it stood on this day; the current repository total is 141 passed — see `docs/day7_api.md`)*
 - **Bytecode Compilation (`compileall app`)**: `0 errors`
 - **Git Status**: Working tree clean (with tracked evaluation documentation and artifact).
 

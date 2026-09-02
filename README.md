@@ -148,6 +148,8 @@ During the live 50-case benchmark on `gemini-3.6-flash`:
 - **Entity Linkage Accuracy**: **5 / 5 (100%)**
 - **Quota Impact**: The remaining 45 requests were blocked by Google API Free Tier rate limits (HTTP 429), not model misclassifications. All rate-limited requests cleanly and safely escalated to human review.
 
+> **Model Configuration**: `gemini-3.6-flash` was used for this specific historical benchmark via an explicit `GEMINI_MODEL_NAME` override. The repository's default model — used out-of-the-box with no override — is `gemini-2.5-flash`. See [Local Installation](#local-installation--quickstart) below to configure either.
+
 ---
 
 ## Canonical Demo Scenarios
@@ -178,6 +180,7 @@ ReconGuard includes 1-click demo launchers directly on the dashboard for immedia
 - Python 3.11+
 - Node.js 18+ and npm
 - Optional: `GEMINI_API_KEY` for live LLM investigations (MockProvider works out-of-the-box offline)
+- Optional: `GEMINI_MODEL_NAME` to override the Gemini model used (defaults to `gemini-2.5-flash` if unset)
 
 ### 1. Backend Setup
 
@@ -196,9 +199,10 @@ python -m venv .venv
 # Install dependencies
 pip install -r requirements.txt
 
-# (Optional) Configure Gemini API Key
+# (Optional) Configure Gemini API Key and model
 # Set in your local environment or .env file (never committed)
 # set GEMINI_API_KEY=your_key_here
+# set GEMINI_MODEL_NAME=gemini-2.5-flash   (optional; this is already the default if unset)
 
 # Start the FastAPI backend server
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000

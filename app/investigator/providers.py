@@ -324,9 +324,30 @@ class MockProvider(LLMProvider):
 class GeminiProvider(LLMProvider):
     """Real Gemini LLM provider using Google GenAI SDK with structured function calling."""
 
-    def __init__(self, api_key: str | None = None, model_name: str = "gemini-2.5-flash"):
+    # Controlled set of finding labels the model is allowed to return. Kept in sync
+    # with FindingTaxonomy (minus ESCALATE_TO_HUMAN, which is reserved for the
+    # InvestigatorAgent's pre-investigation policy gate, not a model-produced finding).
+    _ALLOWED_FINDINGS = [
+        FindingTaxonomy.VERIFIED_ROUNDING_VARIANCE.value,
+        FindingTaxonomy.VERIFIED_REFERENCE_TYPO.value,
+        FindingTaxonomy.MISSING_INVOICE_CONFIRMED.value,
+        FindingTaxonomy.INCONCLUSIVE.value,
+    ]
+
+    # Fallback used only when neither an explicit `model_name` argument nor the
+    # GEMINI_MODEL_NAME environment variable is provided. This is the current
+    # repository default, NOT the model used for the historical Day 6 live
+    # benchmark (that run explicitly overrode this via GEMINI_MODEL_NAME /
+    # a constructor argument to "gemini-3.6-flash" -- see docs/day6_gemini_evaluation.md).
+    _DEFAULT_MODEL_NAME = "gemini-2.5-flash"
+
+    def __init__(self, api_key: str | None = None, model_name: str | None = None):
         self.api_key = api_key or os.environ.get("GEMINI_API_KEY")
-        self.model_name = model_name
+        self.model_name = (
+            model_name
+            or os.environ.get("GEMINI_MODEL_NAME")
+            or self._DEFAULT_MODEL_NAME
+        )
 
     @property
     def provider_name(self) -> str:
@@ -337,13 +358,55 @@ class GeminiProvider(LLMProvider):
         """Check if Gemini credentials are configured."""
         return bool(self.api_key)
 
+    @staticmethod
+    def _strip_code_fence(text: str) -> str:
+        """Remove a leading/trailing markdown code fence if the model added one anyway."""
+        stripped = text.strip()
+        if stripped.startswith("```"):
+            stripped = stripped.strip("`")
+            if stripped.lower().startswith("json"):
+                stripped = stripped[4:]
+        return stripped.strip()
+
+    def _safe_fallback_result(
+        self,
+        context: InvestigationContext,
+        tool_trace: list[ToolCallRecord],
+        root_cause: str,
+        raw_text_excerpt: str = "",
+        status: InvestigationStatus = InvestigationStatus.INCONCLUSIVE,
+    ) -> InvestigationResult:
+        """Build the deterministic, non-guessing fallback used whenever Gemini's
+        output cannot be safely parsed as structured JSON. Never infers a financial
+        finding from partial/unparseable text."""
+        evidence: dict[str, Any] = {"tool_calls_executed": len(tool_trace)}
+        if raw_text_excerpt:
+            evidence["unparsed_raw_response_excerpt"] = raw_text_excerpt[:500]
+        return InvestigationResult(
+            case_id=context.case_id,
+            order_id=context.order_id,
+            finding=FindingTaxonomy.INCONCLUSIVE,
+            root_cause=root_cause,
+            evidence=evidence,
+            confidence=0.0,
+            recommendation=(
+                "Recommend escalation to human operations review; AI investigator could not "
+                "produce a validated structured finding. No financial action was taken by the investigator."
+            ),
+            requires_human_review=True,
+            investigation_status=status,
+            tool_trace=tool_trace,
+            provider_used=self.provider_name,
+        )
+
     def investigate(
         self,
         context: InvestigationContext,
         tools: InvestigationToolRegistry,
         max_iterations: int = 6,
     ) -> InvestigationResult:
-        """Execute real Gemini tool-calling investigation loop."""
+        """Execute real Gemini tool-calling investigation loop, then require the model
+        to return genuine schema-validated structured JSON for the final conclusion."""
         if not self.is_available:
             raise ValueError(
                 "GeminiProvider is not available: GEMINI_API_KEY environment variable is not set."
@@ -365,9 +428,7 @@ class GeminiProvider(LLMProvider):
             "You must corroborate complete evidence chains before reaching a conclusion. "
             "You must never attempt write operations, never take financial actions, and never claim "
             "that you created, booked, refunded, modified, or closed anything. "
-            "All recommendations must explicitly state that no financial action was taken by the investigator. "
-            "When finished, return a structured JSON response with finding, root_cause, evidence, "
-            "confidence (0.0-1.0), recommendation, and requires_human_review (bool)."
+            "All recommendations must explicitly state that no financial action was taken by the investigator."
         )
 
         tool_decls = tools.get_tool_declarations()
@@ -389,7 +450,7 @@ class GeminiProvider(LLMProvider):
             f"Candidate Settlement IDs: {context.settlement_ids}\n"
             f"Reason: {context.reason}\n"
             f"Explanation: {context.explanation}\n"
-            f"Please lookup relevant records, corroborate the evidence chain, and produce your structured finding."
+            f"Please lookup relevant records and corroborate the evidence chain using the available tools."
         )
 
         try:
@@ -427,26 +488,123 @@ class GeminiProvider(LLMProvider):
 
                 response = chat.send_message(func_responses)
 
-            raw_text = response.text or ""
+            # --- Finalization phase: force genuine schema-validated JSON output ---
+            # Tool-calling and response_schema cannot reliably be requested in the same
+            # call for all Gemini models, so evidence-gathering (above) and structured
+            # conclusion (below) are deliberately two separate calls against the same
+            # chat session/history rather than one call whose free text we keyword-search.
+            response_schema = types.Schema(
+                type=types.Type.OBJECT,
+                properties={
+                    "finding": types.Schema(
+                        type=types.Type.STRING,
+                        enum=self._ALLOWED_FINDINGS,
+                    ),
+                    "root_cause": types.Schema(type=types.Type.STRING),
+                    "evidence_summary": types.Schema(type=types.Type.STRING),
+                    "confidence": types.Schema(type=types.Type.NUMBER),
+                    "recommendation": types.Schema(type=types.Type.STRING),
+                    "requires_human_review": types.Schema(type=types.Type.BOOLEAN),
+                },
+                required=[
+                    "finding",
+                    "root_cause",
+                    "confidence",
+                    "recommendation",
+                    "requires_human_review",
+                ],
+            )
 
-            # Parse finding from response
-            finding = FindingTaxonomy.INCONCLUSIVE
-            if "ROUNDING" in raw_text.upper():
-                finding = FindingTaxonomy.VERIFIED_ROUNDING_VARIANCE
-            elif "TYPO" in raw_text.upper() or "REFERENCE" in raw_text.upper():
-                finding = FindingTaxonomy.VERIFIED_REFERENCE_TYPO
-            elif "INVOICE" in raw_text.upper():
-                finding = FindingTaxonomy.MISSING_INVOICE_CONFIRMED
+            finalize_prompt = (
+                "Based only on the evidence you gathered via tool calls above, produce your final "
+                "structured finding now. Respond with a single JSON object matching the required schema. "
+                "'finding' must be one of the allowed enum values. 'confidence' must be a number between "
+                "0.0 and 1.0 reflecting your actual certainty given the evidence, not a placeholder. "
+                "'requires_human_review' must be true unless the evidence chain is fully corroborated. "
+                "'recommendation' must explicitly state that no financial action was taken by the investigator. "
+                "If the evidence is insufficient or contradictory, set finding to INCONCLUSIVE, confidence to "
+                "a low value, and requires_human_review to true — do not guess."
+            )
+
+            final_response = chat.send_message(
+                finalize_prompt,
+                config=types.GenerateContentConfig(
+                    system_instruction=system_instruction,
+                    temperature=0.0,
+                    response_mime_type="application/json",
+                    response_schema=response_schema,
+                ),
+            )
+
+            raw_final_text = self._strip_code_fence(final_response.text or "")
+
+            if not raw_final_text:
+                return self._safe_fallback_result(
+                    context, tool_trace,
+                    root_cause="Gemini returned an empty final response; no structured finding could be extracted.",
+                )
+
+            try:
+                parsed = json.loads(raw_final_text)
+            except json.JSONDecodeError:
+                return self._safe_fallback_result(
+                    context, tool_trace,
+                    root_cause="Gemini's final response was not valid JSON; falling back to a safe inconclusive result rather than guessing.",
+                    raw_text_excerpt=raw_final_text,
+                )
+
+            if not isinstance(parsed, dict) or "finding" not in parsed:
+                return self._safe_fallback_result(
+                    context, tool_trace,
+                    root_cause="Gemini's final JSON response was missing required fields; falling back to a safe inconclusive result.",
+                    raw_text_excerpt=raw_final_text,
+                )
+
+            finding_str = str(parsed.get("finding", "")).strip().upper()
+            try:
+                finding = FindingTaxonomy(finding_str)
+                if finding.value not in self._ALLOWED_FINDINGS:
+                    raise ValueError(f"'{finding_str}' is not an allowed model-produced finding.")
+            except ValueError:
+                return self._safe_fallback_result(
+                    context, tool_trace,
+                    root_cause=f"Gemini returned an unrecognized finding label ('{finding_str}'); falling back to a safe inconclusive result.",
+                    raw_text_excerpt=raw_final_text,
+                )
+
+            try:
+                confidence = float(parsed.get("confidence", 0.0))
+            except (TypeError, ValueError):
+                confidence = 0.0
+            confidence = max(0.0, min(1.0, confidence))
+
+            requires_human_review = bool(parsed.get("requires_human_review", True))
+
+            root_cause = str(parsed.get("root_cause") or "").strip()
+            if not root_cause:
+                root_cause = "Gemini investigation completed but did not provide a root cause narrative."
+
+            recommendation = str(parsed.get("recommendation") or "").strip()
+            if "no financial action was taken" not in recommendation.lower():
+                recommendation = (
+                    (recommendation + " " if recommendation else "")
+                    + "No financial action was taken by the investigator."
+                ).strip()
+
+            evidence = {
+                "evidence_summary": str(parsed.get("evidence_summary") or ""),
+                "structured_response": parsed,
+            }
 
             return InvestigationResult(
                 case_id=context.case_id,
                 order_id=context.order_id,
                 finding=finding,
-                root_cause=raw_text[:200] if raw_text else "Gemini investigation completed.",
-                evidence={"raw_response": raw_text[:500]},
-                confidence=0.95,
-                recommendation="Evidence corroborated by AI investigator. Recommend reconciliation for human/system approval. No financial action was taken by the investigator.",
-                requires_human_review=False,
+                root_cause=root_cause,
+                evidence=evidence,
+                confidence=confidence,
+                recommendation=recommendation,
+                requires_human_review=requires_human_review,
                 supporting_payment_ids=context.payment_ids,
                 supporting_settlement_ids=context.settlement_ids,
                 supporting_invoice_id=context.invoice_id,
