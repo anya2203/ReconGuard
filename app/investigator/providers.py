@@ -204,16 +204,14 @@ class MockProvider(LLMProvider):
                 order_id=order_id,
                 finding=FindingTaxonomy.VERIFIED_ROUNDING_VARIANCE,
                 root_cause=(
-                    f"Micro-amount variance of INR {context.financial_impact:.2f} caused by "
-                    f"itemized GST line rounding between checkout and settlement gateway."
+                    f"Order '{order_id}' amount ({order_res.get('amount')}) and settlement "
+                    f"amount ({settlement_res.get('amount')}) differ by <= ₹0.50 due to standard rounding."
                 ),
                 evidence={
                     "order_amount": order_res.get("amount"),
                     "payment_amount": payment_res.get("amount"),
                     "settlement_amount": settlement_res.get("amount"),
-                    "variance_amount": context.financial_impact,
-                    "invoice_verified": invoice_res.get("found"),
-                    "utr_verified": comp_res.get("utr_exact_match"),
+                    "variance": abs((order_res.get("amount") or 0) - (settlement_res.get("amount") or 0)),
                 },
                 confidence=0.98,
                 recommendation=f"Evidence supports an INR {context.financial_impact:.2f} rounding variance. Recommend reconciliation of the variance for human/system approval. No financial action was taken by the investigator.",
@@ -226,17 +224,17 @@ class MockProvider(LLMProvider):
                 provider_used=self.provider_name,
             )
 
-        # 2. Reference Typo Case
-        elif ext == "REFERENCE_MISMATCH" or "reference" in context.reason.lower() or "fuzzy match verified" in context.reason.lower():
-            pay_utr = payment_res.get("utr", "")
-            set_utr = settlement_res.get("utr", "")
+        # 2. Reference Mismatch / Typo Case (Hero Case)
+        elif ext == "REFERENCE_MISMATCH":
+            pay_utr = payment_res.get("utr")
+            set_utr = settlement_res.get("utr")
             return InvestigationResult(
                 case_id=context.case_id,
                 order_id=order_id,
                 finding=FindingTaxonomy.VERIFIED_REFERENCE_TYPO,
                 root_cause=(
-                    f"Gateway UTR '{pay_utr}' and bank settlement reference '{set_utr}' "
-                    f"differ due to single-character transmission typo. Counterparty, amount, "
+                    f"Payment UTR '{pay_utr}' and Settlement UTR '{set_utr}' exhibit "
+                    f"character transposition / typo in gateway record, but exact amounts "
                     f"and timestamp corroborate valid 1:1 match."
                 ),
                 evidence={
@@ -292,10 +290,12 @@ class MockProvider(LLMProvider):
             finding=FindingTaxonomy.INCONCLUSIVE,
             root_cause="Operational evidence is insufficient to determine root cause.",
             evidence={"tool_trace_count": len(tool_trace)},
-            confidence=0.5,
+            confidence=0.0,
             recommendation="Evidence is inconclusive. Recommend escalation to operations desk for manual investigation. No financial action was taken by the investigator.",
             requires_human_review=True,
             investigation_status=InvestigationStatus.INCONCLUSIVE,
+            error_category="INCONCLUSIVE",
+            failure_reason="Operational evidence is insufficient to determine root cause.",
             tool_trace=tool_trace,
             provider_used=self.provider_name,
         )
@@ -315,18 +315,40 @@ class MockProvider(LLMProvider):
             confidence=0.0,
             recommendation="Maximum investigation iterations exceeded. Recommend escalation to human operations review. No financial action was taken by the investigator.",
             requires_human_review=True,
-            investigation_status=InvestigationStatus.INCONCLUSIVE,
+            investigation_status=InvestigationStatus.ITERATION_LIMIT,
+            error_category="ITERATION_LIMIT",
+            failure_reason="Maximum investigation tool execution iterations exceeded.",
             tool_trace=tool_trace,
             provider_used=self.provider_name,
         )
 
 
+class DemoReplayProvider(LLMProvider):
+    """Pre-recorded deterministic replay provider for buildathon judge demonstration.
+
+    Explicitly labeled as DEMO REPLAY so it is never confused with a live Gemini model response.
+    """
+
+    @property
+    def provider_name(self) -> str:
+        return "demo_replay"
+
+    def investigate(
+        self,
+        context: InvestigationContext,
+        tools: InvestigationToolRegistry,
+        max_iterations: int = 6,
+    ) -> InvestigationResult:
+        """Execute deterministic replay investigation clearly labeled as demonstration."""
+        mock = MockProvider()
+        result = mock.investigate(context, tools, max_iterations=max_iterations)
+        result.provider_used = self.provider_name
+        return result
+
+
 class GeminiProvider(LLMProvider):
     """Real Gemini LLM provider using Google GenAI SDK with structured function calling."""
 
-    # Controlled set of finding labels the model is allowed to return. Kept in sync
-    # with FindingTaxonomy (minus ESCALATE_TO_HUMAN, which is reserved for the
-    # InvestigatorAgent's pre-investigation policy gate, not a model-produced finding).
     _ALLOWED_FINDINGS = [
         FindingTaxonomy.VERIFIED_ROUNDING_VARIANCE.value,
         FindingTaxonomy.VERIFIED_REFERENCE_TYPO.value,
@@ -334,11 +356,6 @@ class GeminiProvider(LLMProvider):
         FindingTaxonomy.INCONCLUSIVE.value,
     ]
 
-    # Fallback used only when neither an explicit `model_name` argument nor the
-    # GEMINI_MODEL_NAME environment variable is provided. This is the current
-    # repository default, NOT the model used for the historical Day 6 live
-    # benchmark (that run explicitly overrode this via GEMINI_MODEL_NAME /
-    # a constructor argument to "gemini-3.6-flash" -- see docs/day6_gemini_evaluation.md).
     _DEFAULT_MODEL_NAME = "gemini-2.5-flash"
 
     def __init__(self, api_key: str | None = None, model_name: str | None = None):
@@ -375,6 +392,7 @@ class GeminiProvider(LLMProvider):
         root_cause: str,
         raw_text_excerpt: str = "",
         status: InvestigationStatus = InvestigationStatus.INCONCLUSIVE,
+        error_category: str | None = None,
     ) -> InvestigationResult:
         """Build the deterministic, non-guessing fallback used whenever Gemini's
         output cannot be safely parsed as structured JSON. Never infers a financial
@@ -395,6 +413,8 @@ class GeminiProvider(LLMProvider):
             ),
             requires_human_review=True,
             investigation_status=status,
+            error_category=error_category or status.value,
+            failure_reason=root_cause,
             tool_trace=tool_trace,
             provider_used=self.provider_name,
         )
@@ -405,21 +425,27 @@ class GeminiProvider(LLMProvider):
         tools: InvestigationToolRegistry,
         max_iterations: int = 6,
     ) -> InvestigationResult:
-        """Execute real Gemini tool-calling investigation loop, then require the model
-        to return genuine schema-validated structured JSON for the final conclusion."""
+        """Execute real Gemini tool-calling investigation loop with graceful fallback."""
+        tool_trace: list[ToolCallRecord] = []
+
         if not self.is_available:
-            raise ValueError(
-                "GeminiProvider is not available: GEMINI_API_KEY environment variable is not set."
+            return self._safe_fallback_result(
+                context, tool_trace,
+                root_cause="GeminiProvider is not available: GEMINI_API_KEY environment variable is not configured.",
+                status=InvestigationStatus.CONFIGURATION_ERROR,
+                error_category="CONFIGURATION_ERROR",
             )
 
         try:
             from google import genai
             from google.genai import types
         except ImportError:
-            raise ImportError("google-genai SDK is required for GeminiProvider. Please install `google-genai`.")
-
-        client = genai.Client(api_key=self.api_key)
-        tool_trace: list[ToolCallRecord] = []
+            return self._safe_fallback_result(
+                context, tool_trace,
+                root_cause="google-genai SDK is not installed in the environment.",
+                status=InvestigationStatus.CONFIGURATION_ERROR,
+                error_category="CONFIGURATION_ERROR",
+            )
 
         system_instruction = (
             "You are ReconGuard AI Investigator, an expert financial reconciliation agent. "
@@ -454,6 +480,7 @@ class GeminiProvider(LLMProvider):
         )
 
         try:
+            client = genai.Client(api_key=self.api_key)
             chat = client.chats.create(
                 model=self.model_name,
                 config=types.GenerateContentConfig(
@@ -465,7 +492,9 @@ class GeminiProvider(LLMProvider):
             response = chat.send_message(prompt)
 
             # Multi-turn tool-calling loop
+            iteration_count = 0
             for _ in range(max_iterations):
+                iteration_count += 1
                 if not response.function_calls:
                     break
 
@@ -488,11 +517,15 @@ class GeminiProvider(LLMProvider):
 
                 response = chat.send_message(func_responses)
 
-            # --- Finalization phase: force genuine schema-validated JSON output ---
-            # Tool-calling and response_schema cannot reliably be requested in the same
-            # call for all Gemini models, so evidence-gathering (above) and structured
-            # conclusion (below) are deliberately two separate calls against the same
-            # chat session/history rather than one call whose free text we keyword-search.
+            if response.function_calls and len(tool_trace) >= max_iterations:
+                return self._safe_fallback_result(
+                    context, tool_trace,
+                    root_cause="Gemini investigation exceeded maximum allowed tool iterations without resolving.",
+                    status=InvestigationStatus.ITERATION_LIMIT,
+                    error_category="ITERATION_LIMIT",
+                )
+
+            # Finalization phase: force genuine schema-validated JSON output
             response_schema = types.Schema(
                 type=types.Type.OBJECT,
                 properties={
@@ -542,6 +575,8 @@ class GeminiProvider(LLMProvider):
                 return self._safe_fallback_result(
                     context, tool_trace,
                     root_cause="Gemini returned an empty final response; no structured finding could be extracted.",
+                    status=InvestigationStatus.MALFORMED_RESPONSE,
+                    error_category="MALFORMED_RESPONSE",
                 )
 
             try:
@@ -551,6 +586,8 @@ class GeminiProvider(LLMProvider):
                     context, tool_trace,
                     root_cause="Gemini's final response was not valid JSON; falling back to a safe inconclusive result rather than guessing.",
                     raw_text_excerpt=raw_final_text,
+                    status=InvestigationStatus.MALFORMED_RESPONSE,
+                    error_category="MALFORMED_RESPONSE",
                 )
 
             if not isinstance(parsed, dict) or "finding" not in parsed:
@@ -558,6 +595,8 @@ class GeminiProvider(LLMProvider):
                     context, tool_trace,
                     root_cause="Gemini's final JSON response was missing required fields; falling back to a safe inconclusive result.",
                     raw_text_excerpt=raw_final_text,
+                    status=InvestigationStatus.MALFORMED_RESPONSE,
+                    error_category="MALFORMED_RESPONSE",
                 )
 
             finding_str = str(parsed.get("finding", "")).strip().upper()
@@ -570,6 +609,8 @@ class GeminiProvider(LLMProvider):
                     context, tool_trace,
                     root_cause=f"Gemini returned an unrecognized finding label ('{finding_str}'); falling back to a safe inconclusive result.",
                     raw_text_excerpt=raw_final_text,
+                    status=InvestigationStatus.MALFORMED_RESPONSE,
+                    error_category="MALFORMED_RESPONSE",
                 )
 
             try:
@@ -613,16 +654,37 @@ class GeminiProvider(LLMProvider):
                 provider_used=self.provider_name,
             )
         except Exception as e:
+            err_msg = str(e)
+            err_lower = err_msg.lower()
+            if "429" in err_msg or "resource_exhausted" in err_lower or "quota" in err_lower or "rate limit" in err_lower:
+                status = InvestigationStatus.RATE_LIMITED
+                category = "RATE_LIMITED"
+                root_cause = f"Gemini provider rate limit reached (HTTP 429 / Resource Exhausted): {err_msg[:200]}"
+            elif "timeout" in err_lower or "timed out" in err_lower:
+                status = InvestigationStatus.TIMEOUT
+                category = "TIMEOUT"
+                root_cause = f"Gemini provider connection timed out: {err_msg[:200]}"
+            elif "api_key" in err_lower or "credential" in err_lower or "unauthorized" in err_lower or "401" in err_msg or "403" in err_msg:
+                status = InvestigationStatus.CONFIGURATION_ERROR
+                category = "CONFIGURATION_ERROR"
+                root_cause = "Gemini provider authentication/configuration error."
+            else:
+                status = InvestigationStatus.PROVIDER_ERROR
+                category = "PROVIDER_ERROR"
+                root_cause = f"Gemini provider error: {err_msg[:200]}"
+
             return InvestigationResult(
                 case_id=context.case_id,
                 order_id=context.order_id,
                 finding=FindingTaxonomy.INCONCLUSIVE,
-                root_cause=f"Gemini investigation call error: {str(e)}",
-                evidence={"error": str(e)},
+                root_cause=root_cause,
+                evidence={"error_category": category, "error_detail": err_msg[:500]},
                 confidence=0.0,
                 recommendation="Recommend escalation to human operations review due to provider error. No financial action was taken by the investigator.",
                 requires_human_review=True,
-                investigation_status=InvestigationStatus.FAILED,
+                investigation_status=status,
+                error_category=category,
+                failure_reason=root_cause,
                 tool_trace=tool_trace,
                 provider_used=self.provider_name,
             )

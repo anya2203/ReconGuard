@@ -1,0 +1,165 @@
+{
+  "metadata": {
+    "title": "ReconGuard Benchmark & Financial Exposure Report",
+    "timestamp": "2026-09-03T16:16:19.398004+00:00",
+    "data_directory": "data",
+    "provider_evaluated": "mock",
+    "total_records": 1000,
+    "pipeline_runtime_seconds": 0.9788
+  },
+  "throughput": {
+    "total_records_processed": 1000,
+    "reconciliation_engine_seconds": 0.3829,
+    "policy_engine_seconds": 0.1174,
+    "deterministic_pipeline_seconds": 0.5003,
+    "records_per_second": 1998.7
+  },
+  "reconciliation_correctness": {
+    "total_cases": 1000,
+    "resolved_cases": 820,
+    "correctly_resolved_cases": 780,
+    "incorrectly_resolved_cases": 40,
+    "unresolved_cases": 180,
+    "deterministic_resolution_coverage": 0.82,
+    "deterministic_correctness_rate": 0.9512,
+    "classification_accuracy": 0.939,
+    "classification_macro_f1": 0.6914,
+    "classification_weighted_f1": 0.9436,
+    "payment_linkage_accuracy": 1.0,
+    "payment_linkage_f1": 1.0,
+    "settlement_linkage_accuracy": 0.907,
+    "settlement_linkage_f1": 0.9484,
+    "confusion_matrix": {
+      "MATCHED": {
+        "MATCHED": 780,
+        "AMBIGUOUS": 0,
+        "DISCREPANCY": 0,
+        "UNMATCHED": 0
+      },
+      "DISCREPANCY": {
+        "DISCREPANCY": 115,
+        "MATCHED": 40,
+        "AMBIGUOUS": 21,
+        "UNMATCHED": 0
+      },
+      "UNMATCHED": {
+        "UNMATCHED": 44,
+        "AMBIGUOUS": 0,
+        "DISCREPANCY": 0,
+        "MATCHED": 0
+      },
+      "AMBIGUOUS": {
+        "AMBIGUOUS": 0,
+        "DISCREPANCY": 0,
+        "MATCHED": 0,
+        "UNMATCHED": 0
+      }
+    },
+    "per_class_metrics": {
+      "AMBIGUOUS": {
+        "precision": 0.0,
+        "recall": 0.0,
+        "f1": 0.0,
+        "support": 0
+      },
+      "DISCREPANCY": {
+        "precision": 1.0,
+        "recall": 0.6534,
+        "f1": 0.7904,
+        "support": 176
+      },
+      "MATCHED": {
+        "precision": 0.9512,
+        "recall": 1.0,
+        "f1": 0.975,
+        "support": 780
+      },
+      "UNMATCHED": {
+        "precision": 1.0,
+        "recall": 1.0,
+        "f1": 1.0,
+        "support": 44
+      }
+    }
+  },
+  "exception_detection": {
+    "true_positives": 220,
+    "true_negatives": 780,
+    "false_positives": 0,
+    "false_negatives": 0,
+    "precision": 1.0,
+    "recall": 1.0,
+    "f1": 1.0,
+    "specificity": 1.0
+  },
+  "policy_routing": {
+    "counts": {
+      "AUTO_RESOLVE": 780,
+      "AI_INVESTIGATION": 50,
+      "HUMAN_REVIEW": 40,
+      "ESCALATE": 130
+    },
+    "proportions": {
+      "AUTO_RESOLVE": 0.78,
+      "AI_INVESTIGATION": 0.05,
+      "HUMAN_REVIEW": 0.04,
+      "ESCALATE": 0.13
+    },
+    "priority_counts": {
+      "HIGH": 170,
+      "MEDIUM": 30,
+      "LOW": 800
+    }
+  },
+  "financial_exposure": {
+    "total_financial_exposure_identified": 1109091.5,
+    "exposure_resolved": 0.0,
+    "exposure_under_ai_investigation": 1.0,
+    "exposure_human_review": 249960.0,
+    "exposure_escalated": 859130.5,
+    "average_exposure_per_exception": 5041.32,
+    "maximum_single_case_exposure": {
+      "case_id": "CASE-000846",
+      "order_id": "ORD-000846",
+      "exception_type": "MISSING_PAYMENT",
+      "financial_impact": 49999.0
+    },
+    "exposure_by_decision": {
+      "AUTO_RESOLVE": 0.0,
+      "AI_INVESTIGATION": 1.0,
+      "HUMAN_REVIEW": 249960.0,
+      "ESCALATE": 859130.5
+    },
+    "exposure_by_priority": {
+      "HIGH": 1109090.5,
+      "MEDIUM": 0.0,
+      "LOW": 1.0
+    }
+  },
+  "ai_investigation_subset": {
+    "mode": "MOCK",
+    "total_ai_cases": 50,
+    "completion_rate": 1.0,
+    "structured_output_validity": 1.0,
+    "finding_accuracy": 1.0,
+    "recommendation_accuracy": 1.0,
+    "linkage_accuracy": 1.0,
+    "inconclusive_rate": 0.0,
+    "average_tool_calls_per_case": 6.0,
+    "average_latency_seconds": 0.0011,
+    "safety_metrics": {
+      "hallucinated_record_count": 0,
+      "unsupported_finding_count": 0,
+      "incorrect_linkage_count": 0,
+      "unauthorized_action_count": 0,
+      "tool_loop_violations": 0,
+      "correctly_escalated_cases": 0
+    },
+    "findings_distribution": {
+      "VERIFIED_ROUNDING_VARIANCE": 20,
+      "VERIFIED_REFERENCE_TYPO": 20,
+      "MISSING_INVOICE_CONFIRMED": 10
+    },
+    "live_gemini_benchmark_notes": "During the live Gemini 3.6 Flash evaluation across 50 cases, 5 investigations completed before the Google API Free Tier per-minute quota was exhausted (HTTP 429). All 5 completed investigations produced correct findings (100%) and valid entity linkages (100%). The remaining 45 cases were safely rate-limited and escalated rather than misclassified."
+  }
+}

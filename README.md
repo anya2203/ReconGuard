@@ -1,292 +1,383 @@
-# ReconGuard
+# ReconGuard — AI Finance Controller
 
-> **Deterministic-First AI Finance Controller for Payment Reconciliation and Exception Investigation**
-> *Razorpay Buildathon — Track 04 / AI Finance Controller*
+> **A deterministic-first financial reconciliation engine with policy-governed, read-only AI exception investigation.**  
+> Built for **Razorpay AI Buildathon 2026** — *Track 04: AI Finance Controller*
+
+![Python](https://img.shields.io/badge/Python-3.11%2B-blue?style=flat-square&logo=python)
+![FastAPI](https://img.shields.io/badge/FastAPI-0.115%2B-009688?style=flat-square&logo=fastapi)
+![React](https://img.shields.io/badge/React-19-61DAFB?style=flat-square&logo=react)
+![TypeScript](https://img.shields.io/badge/TypeScript-5.9-3178C6?style=flat-square&logo=typescript)
+![Vite](https://img.shields.io/badge/Vite-6.2-646CFF?style=flat-square&logo=vite)
+![Tests](https://img.shields.io/badge/Tests-179%20Passing-brightgreen?style=flat-square)
 
 ---
 
-## Executive Summary
+## Overview
 
-Payment reconciliation across checkout orders, payment gateways, bank settlement files, tax invoices, and dispute adjustments is historically fragmented and high-friction. Finance operations teams often rely on either brittle regex rules or unconstrained LLM wrappers that hallucinate financial actions.
+In fintech and merchant operations, financial reconciliation involves matching high volumes of checkout orders against gateway payment captures, bank settlement files, billing tax invoices, and dispute adjustments.
 
-**ReconGuard** establishes an enterprise-grade hybrid architecture:
-1. **Deterministic-First**: High-volume, structured transaction matching is handled entirely by a rule-based engine across 4 specialized matching strategies.
-2. **Policy-Governed**: An independent Policy Engine classifies every exception by financial exposure and risk tier, deciding whether a case is safe to auto-resolve, requires autonomous evidence collection, or must be escalated immediately.
-3. **Read-Only AI Investigator**: Genuinely ambiguous cases are routed to an autonomous LLM agent equipped with 8 strictly read-only operational tools to corroborate evidence chains across disparate transaction records without any write authority.
-4. **Human/System Action**: The AI investigator generates advisory recommendations with root-cause traces; all final approval authority remains outside the AI agent.
+While over 80% of transactions match cleanly, the remaining ambiguous exceptions—such as character-transposed reference numbers (UTRs), sub-cent GST rounding variances, and omitted invoice feeds—traditionally force operations teams into manual ticket triage. Conversely, delegating financial ledger mutations directly to an unconstrained LLM creates severe risks of hallucinations and unauthorized balance alterations.
+
+**ReconGuard** resolves this tradeoff through a hybrid architecture:
+- **Deterministic Reconciliation**: High-speed, rule-based algorithms resolve clean transactions with mathematical certainty.
+- **Deterministic Policy Engine**: Explicit rules determine whether a discrepancy is safe to auto-resolve, requires evidence collection, or must be escalated immediately.
+- **Read-Only AI Investigator**: Genuinely ambiguous cases are investigated by an autonomous AI agent equipped with 8 strictly read-only tools to corroborate multi-entity evidence chains without write authority.
+- **Human Control & Auditability**: High-risk financial actions remain under human control, with every lifecycle event preserved in an immutable, append-only audit trail.
+
+> *"ReconGuard reconciles what can be proven, investigates what is ambiguous, and keeps high-risk financial decisions under policy and human control."*
+
+---
+
+## The Problem
+
+High-volume payment reconciliation across multiple data feeds presents distinct engineering challenges:
+
+1. **Multi-Feed Asynchrony**: Merchant checkout orders, gateway payment notifications, bank settlement files, and billing invoices arrive on different schedules and with varying reference schemas.
+2. **Brittle Rule Systems**: Rigid regex and exact matching scripts fail on benign operational noise, such as single-character UTR transmission typos or standard line-item tax rounding differences.
+3. **Operational Triage Burden**: Ambiguous mismatches create massive exception backlogs that require manual cross-referencing across separate databases.
+4. **The AI Safety Dilemma**: Giving generative AI autonomous authority to write to financial ledgers, initiate refunds, or alter balances is unacceptable in regulated financial systems.
+
+---
+
+## The Solution
+
+ReconGuard uses a **deterministic-first, policy-governed** architecture. The AI is not an autonomous actor with ledger access; it is an analytical investigator that gathers operational evidence and presents structured advisory findings.
 
 ```mermaid
 flowchart TD
-    A["Operational Data Feeds<br/>(Orders, Payments, Settlements, Invoices, Adjustments)"] --> B["Deterministic Matching Engine<br/>(Exact, Duplicate, Aggregation, Fuzzy)"]
-    B --> C["Reconciliation Status<br/>(Matched, Ambiguous, Discrepancy, Unmatched)"]
-    C --> D["Policy Engine & Risk Classifier"]
-
-    D -->|"Clean Matches (78.0%)"| E["AUTO_RESOLVE<br/>(Immediate Ledger Clearing)"]
-    D -->|"Complex Discrepancies (5.0%)"| F["AI_INVESTIGATION<br/>(Autonomous Evidence Corroboration)"]
-    D -->|"Ambiguous Candidates (4.0%)"| G["HUMAN_REVIEW<br/>(Ops Desk Triage Queue)"]
-    D -->|"High-Risk Disputes / Amount Variances (13.0%)"| H["ESCALATE<br/>(Dispute & Fraud Desk)"]
-
-    F --> I["AI Investigator Agent<br/>(Gemini 3.6 Flash / Multi-Turn Function Calling)"]
-    I <-->|"Read-Only Function Calls"| J["8 Operational Tools<br/>(Order, Payment, Settlement, Invoice, Adjustment Queries)"]
-    I --> K["Structured Finding & Advisory Recommendation<br/>(Read-Only Audit Trace)"]
-    K --> L["Human Operations / System Approval"]
+    A[Operational Data Feeds\nOrders, Payments, Settlements, Invoices, Adjustments] --> B[Deterministic Reconciliation Engine\nExact, Duplicate, Aggregation, Fuzzy]
+    B --> C[Reconciliation Results\nMatched, Ambiguous, Discrepancy, Unmatched]
+    C --> D[Deterministic Policy Engine\n12 Explicit Branches & Exposure Rules]
+    
+    D -->|Clean Exact Matches| E[AUTO_RESOLVE\nStraight-Through Resolution]
+    D -->|Ambiguous Discrepancies| F[AI Investigator\n8 Read-Only Tools]
+    D -->|Triage Required| G[HUMAN_REVIEW\nOperations Queue]
+    D -->|High-Risk Variances / Disputes| H[ESCALATE\nDispute & Fraud Desk]
+    
+    F -->|Advisory Finding & Evidence Trace| G
+    E --> I[Append-Only Audit Trail]
+    G --> I
+    H --> I
 ```
 
 ---
 
-## Core Philosophy & Safety Invariants
+## How ReconGuard Works
 
-| Architectural Principle | Implementation Reality |
+ReconGuard processes financial transactions through seven distinct stages:
+
+1. **Operational Records Ingestion**: Ingests structured feeds across orders, payment gateway captures, bank settlement files, tax billing invoices, and adjustment logs.
+2. **Deterministic Reconciliation**: The matching engine executes 4 specialized matching strategies (Exact Match, Duplicate Detection, 1:N Aggregation, and Temporal Levenshtein Fuzzy Matching) to verify data congruence.
+3. **Policy Classification**: The 12-branch Policy Engine evaluates match status, financial exposure, and failed verification checks, assigning each case to one of four definitive decisions: `AUTO_RESOLVE`, `AI_INVESTIGATION`, `HUMAN_REVIEW`, or `ESCALATE`.
+4. **AI Investigation (Eligible Cases Only)**: If routed to `AI_INVESTIGATION`, the autonomous agent queries operational records using 8 read-only tools to evaluate cross-entity linkages (e.g., verifying if amounts, timestamps, and customer IDs match despite a UTR typo).
+5. **Structured Advisory Recommendation**: The investigator produces a structured finding, a confidence score, a root-cause explanation, and a full tool execution trace. All recommendations explicitly state that no financial records were modified.
+6. **Human Operations Control**: High-risk cases and AI-investigated findings are presented to operations personnel for final review. AI failure or inconclusive evidence automatically defaults to human review.
+7. **Append-Only Audit Trail**: Every reconciliation result, policy decision, AI tool call, and human triage requirement is recorded with ISO 8601 timestamps in an immutable audit timeline.
+
+*AI does not perform exact financial reconciliation. It is invoked only when deterministic rules identify ambiguity.*
+
+---
+
+## Key Features
+
+1. **Deterministic Matching Engine**: Fast multi-strategy matching engine processing operational feeds straight-through without AI latency or token cost.
+2. **12-Branch Deterministic Policy Engine**: Classifies exceptions into discrete risk tiers based on monetary impact, exception taxonomy, and verification criteria.
+3. **Read-Only AI Investigator**: Multi-turn tool-calling agent equipped with 8 specific operational query tools to corroborate evidence across tables.
+4. **Evidence-Based Root Cause Diagnosis**: Generates auditable explanations for reference transpositions, rounding differences, and omitted invoice cross-checks.
+5. **Financial Exposure Tracking**: Tracks gross monetary variance across exception queues, maintaining exact parity before and after investigations.
+6. **Append-Only Audit Trail**: Chronological, immutable logging of all system actions, tool arguments, and human review assignments.
+7. **Transparent Provider Modes & Fail-Safe Handling**: Supports `Live Gemini` (Google GenAI SDK), `MockProvider` (offline evaluation), and `Demo Replay` (deterministic walkthroughs), with automatic fail-safe human escalation upon API errors.
+
+---
+
+## AI Safety & Control Boundary
+
+ReconGuard maintains a strict separation between autonomous investigation and financial execution authority.
+
+| AI CAN (Read-Only Investigation) | AI CANNOT (Restricted Financial Actions) |
 | :--- | :--- |
-| **Deterministic First** | 82.0% of cases are resolved by deterministic algorithms in <50ms without invoking an LLM. |
-| **AI Only Where Rules Break** | AI is reserved exclusively for complex reference typos, rounding variances, and omitted invoice cross-checks. |
-| **0 Financial Write Endpoints** | The API layer and tool registry contain **zero write/mutation methods**. No payments, refunds, settlements, or invoices can be modified or created by the AI. |
-| **Advisory Recommendations Only** | AI outputs include explicit disclaimers: *"No financial action was taken by the investigator."* Case approvals remain human/system governed. |
-| **Strict Ground-Truth Isolation** | Production runtime, matching algorithms, policy logic, and AI tools have zero access to benchmark ground-truth labels (verified via AST static analysis tests). |
+| Query order, payment, settlement, and invoice records | Modify database tables, balances, or ledger entries |
+| Compare UTR references and timestamps across tables | Initiate refunds, payouts, or disbursements |
+| Check for active chargeback or refund dispute logs | Alter bank settlement records or fee structures |
+| Calculate numerical variances between feeds | Override Policy Engine decisions or risk tiers |
+| Synthesize evidence and generate advisory findings | Convert an exception into `AUTO_RESOLVE` |
+| Produce tool execution traces for human review | Bypass human signoff on high-risk disputes |
+
+> **Core Boundary**: *"AI investigates. Policy decides. Humans control risk."*
 
 ---
 
-## Technical Architecture
+## Dashboard
+
+ReconGuard includes a dedicated React + TypeScript finance controller interface built with Vite and Tailwind CSS.
+
+- **Controller Overview**: High-level telemetry displaying total volume, straight-through auto-resolution counts, active financial exposure, exception priority breakdown, and benchmark metrics.
+- **Case Explorer**: Server-side searchable, paginated case table with multi-field filters for Policy Decision, Priority, Exception Type, and Control Owner (`ENGINE`, `AI AGENT`, `OPS DESK`, `DISPUTE DESK`).
+- **Case Detail View**: Comprehensive transaction lifecycle chain mapping order checkout, payment capture, bank settlement, tax invoice, and adjustment records alongside UTR comparison callouts.
+- **AI Safety & Boundary Panel**: Explicit visual confirmation of agent boundary limits (read-only tools active, 0 write tools).
+- **Interactive Investigation Workflow**: Transparent provider selection (`Demo Replay`, `Mock Provider`, `Live Gemini`), execution trace viewer with expandable tool arguments, and fail-safe human escalation states.
+- **Audit Trail Timeline**: Chronological event feed detailing all system, policy, AI, and human desk actions for any given case.
+
+*The production frontend is located in [`frontend/`](frontend/), and design specifications and information architecture are documented in [`dashboard-design/`](dashboard-design/).*
+
+---
+
+## Evaluation
+
+ReconGuard was evaluated against an independent ground-truth dataset across 1,000 synthetic operational cases modeling 13 realistic transaction anomaly scenarios.
+
+### Verified Benchmark Results
+
+| Evaluation Metric | Measured Result | Operational Meaning |
+| :--- | :---: | :--- |
+| **Total Operational Cases** | **1,000 cases** | Full benchmark test volume across 13 anomaly scenarios |
+| **Deterministic Resolution Coverage** | **82.00%** (820 / 1,000) | Cases resolved straight-through without invoking AI |
+| **Deterministic Correctness Rate** | **95.12%** (780 / 820) | Resolved cases confirmed as clean 1:1 exact matches |
+| **Overall Classification Accuracy** | **93.90%** (939 / 1,000) | Exception taxonomy classifications matching ground truth |
+| **Binary Exception Detection F1** | **100.00%** | Zero false negatives on financial anomaly detection |
+| **Payment Entity Linkage F1** | **100.00%** | Order-to-gateway capture linkage accuracy |
+| **Settlement Entity Linkage F1** | **94.84%** | Bank settlement reference linkage accuracy |
+| **Total Financial Exposure Identified** | **₹1,109,091.50** | Total monetary variance isolated and brought under governance |
+
+### Understanding the Metrics
+- **82.00% Coverage**: The deterministic engine resolves 820 cases straight-through. Of these, 780 are clean exact matches (`AUTO_RESOLVE`), while 40 contain minor discrepancies safely isolated for triage.
+- **93.90% Classification Accuracy**: Measures the system's ability to categorize exceptions into exact taxonomies (e.g., distinguishing reference typos from missing invoices).
+- **₹1,109,091.50 Exposure**: Represents the gross financial variance identified across exception cases, not money recovered.
+
+---
+
+## AI Evaluation & Provider Reality
+
+To maintain transparency, the repository clearly delineates offline evaluation from live API execution:
+
+- **MockProvider (Offline Evaluation)**: Evaluated across all 50 ambiguous discrepancy cases in the benchmark dataset, achieving 100% finding accuracy (50/50) with deterministic, reproducible tool execution.
+- **Live Gemini Provider (`gemini-2.5-flash` / `gemini-3.6-flash`)**: During live evaluation against the Google GenAI API on the 50 AI cases:
+  - **5 cases completed** successfully before provider Free Tier quota exhaustion (HTTP 429).
+  - All 5 completed cases achieved **100% finding and linkage accuracy**.
+  - The remaining **45 cases encountered rate limits** and cleanly escalated to human review as designed.
+
+> *We do not use the 5 completed live Gemini cases to claim general live-model production accuracy. Live LLMs are subject to real-world rate limits, which is why ReconGuard's fail-safe design routes provider errors directly to human operations triage.*
+
+---
+
+## Auditability
+
+Every case in ReconGuard maintains an immutable, chronological audit trail:
+
+- **Reconciliation Events (`RECONCILIATION_COMPLETED`)**: Records the matching engine's status, matched entity IDs, and timestamp.
+- **Policy Events (`POLICY_DECISION`)**: Records the deterministic policy rule applied, assigned risk tier, and explanation.
+- **AI Investigation Events (`AI_INVESTIGATION_STARTED`, `AI_INVESTIGATION_COMPLETED`, `AI_INVESTIGATION_FAILED`)**: Logs provider used, tools executed, synthesized findings, confidence scores, and advisory recommendations.
+- **Human Review Events (`HUMAN_REVIEW_REQUIRED`)**: Automatically emitted whenever a case requires operations or dispute desk action.
+- **Read-Only Audit API**: Served via `GET /api/audit` and `GET /api/audit/{case_id}` with zero mutation endpoints.
+
+---
+
+## Failure Recovery
+
+ReconGuard enforces a critical financial invariant:
+
+$$\text{AI Failure} \neq \text{Financial Failure}$$
 
 ```
-ReconGuard Platform
-├── Frontend UI (React 19 + TypeScript + Vite + Tailwind CSS v4)
-│   ├── Overview Dashboard (Executive metrics, exposure breakdown, demo launchers)
-│   ├── Case Explorer (Server-side search, multi-field filtering, pagination)
-│   ├── Case Detail (5-stage transaction lifecycle chain, UTR comparison callout)
-│   ├── Inline AI Investigation Workflow (5 operational states, provider toggle)
-│   └── AI Investigations Registry & Audit Trace (Ordered tool call history)
-│
-├── REST API Layer (FastAPI + Pydantic v2 + SQLite)
-│   ├── GET  /health & /api/health
-│   ├── GET  /api/dashboard/summary
-│   ├── GET  /api/cases (Query params: page, page_size, decision, priority, exception_type, search)
-│   ├── GET  /api/cases/{case_id} & /api/cases/{case_id}/evidence
-│   ├── GET  /api/investigations & /api/investigations/{case_id}
-│   └── POST /api/cases/{case_id}/investigate (Read-only trigger)
-│
-├── Autonomous AI Investigator (Google GenAI SDK + Gemini 3.6 Flash)
-│   ├── Agentic Multi-Turn Function Calling (Max 6 iterations)
-│   ├── 8 Read-Only Tools (lookup_order, lookup_payment, lookup_settlement, lookup_invoice, etc.)
-│   ├── Deterministic MockProvider (Offline testing & instant reproduction)
-│   └── Structured Pydantic Output (FindingTaxonomy, Root Cause, Confidence, Supporting IDs)
-│
-├── Policy & Exception Management Engine
-│   ├── 4 Policy Decisions (AUTO_RESOLVE, AI_INVESTIGATION, HUMAN_REVIEW, ESCALATE)
-│   ├── 3 Priority Levels (HIGH, MEDIUM, LOW)
-│   └── Dual-Axis Financial Impact & Exposure Calculator
-│
-└── Deterministic Reconciliation Engine
-    ├── ExactMatcher (1:1 Amount, Currency, and Reference matching)
-    ├── DuplicateDetector (Multi-capture & duplicate authorization detection)
-    ├── AggregationMatcher (1:N and N:1 batch settlement reconciliation)
-    └── FuzzyMatcher (Levenshtein reference typo matching with temporal tolerance)
+AI Provider Error / HTTP 429 / Timeout / Malformed Response
+                           ↓
+   1. Set Status = RATE_LIMITED / PROVIDER_ERROR / MALFORMED_RESPONSE
+   2. Set Finding = INCONCLUSIVE, Confidence = 0.0
+   3. Emit Audit Event: AI_INVESTIGATION_FAILED
+   4. Emit Audit Event: HUMAN_REVIEW_REQUIRED (Desk: OPERATIONS_DESK)
+   5. Retain Original Policy Decision (NEVER converted to AUTO_RESOLVE)
+   6. Preserve Active Financial Exposure (Zero Mutations)
 ```
 
----
-
-## Operational Dataset
-
-The dataset represents a controlled, synthetic operational simulation modeling real-world payment lifecycle scenarios across 5 interconnected entities:
-
-| Data Entity | Records | File Path | Key Attributes Modeled |
-| :--- | :---: | :--- | :--- |
-| **Orders** | 1,000 | `data/generated/orders.csv` | Order ID, Merchant ID, Customer ID, Amount, Currency, Status, Timestamp |
-| **Payments** | 976 | `data/generated/payments.csv` | Payment ID, Order ID, Amount, Gateway Fee, Gateway UTR, Status, Timestamp |
-| **Settlements** | 906 | `data/generated/settlements.csv` | Settlement ID, Gross Amount, Fee, Tax, Net Payout, Bank UTR, Payout Status |
-| **Invoices** | 970 | `data/generated/invoices.csv` | Invoice ID, Order ID, Gross Amount, Tax Amount, Invoice Status |
-| **Adjustments** | 68 | `data/generated/adjustments.csv` | Adjustment ID, Related Payment ID, Type (Chargeback/Refund), Reason |
-| **Ground Truth** | 1,000 | `data/ground_truth/ground_truth.csv` | Independent benchmark labels used solely for evaluation scoring |
-
-### 13 Modeled Operational Scenarios
-- **Clean Baseline**: Exact 1:1 match across all 5 entities.
-- **Reference Discrepancies**: UTR character transposition (`...12` vs `...21`) between gateway and bank feeds.
-- **Financial Variances**: Sub-cent rounding variances vs macro amount discrepancies.
-- **Timing & Batch Anomalies**: Gateway settlement SLA delays and multi-order aggregated batch payouts.
-- **Disputes & Adjustments**: Chargeback disputes, customer refunds, and omitted merchant tax invoices.
+If an upstream LLM provider is unavailable or returns unparseable JSON, the system degrades safely to human review without blocking operational pipelines or guessing on financial records.
 
 ---
 
-## Evaluation & Benchmark Metrics
+## Testing
 
-### 1. Deterministic Engine Performance (1,000 Cases)
+ReconGuard includes a comprehensive test suite of **179 automated tests**:
 
-```
-================================================================================
-RECONGUARD DETERMINISTIC EVALUATION BENCHMARK
-================================================================================
-Total Operational Volume:             1,000 cases
-Runtime Execution Speed:              0.0477 seconds (1,000 cases evaluated)
-
-Deterministic Resolution Coverage:    82.00% (820 / 1,000 cases resolved)
-Deterministic Correctness Rate:       95.12% (780 / 820 resolved cases confirmed clean)
-Classification Accuracy:              93.90% (939 / 1,000 cases)
-Payment Entity Linkage F1:            100.00%
-Settlement Entity Linkage F1:         94.84%
-False Match Count (Safety):           40 cases (Subtle variances safely routed to AI)
+```text
+============================== test session starts ==============================
+tests/test_matching.py ................................................... [ 28%]
+tests/test_policy.py ........................                              [ 41%]
+tests/test_investigator.py ...........................................     [ 65%]
+tests/test_api.py ........................                                 [ 79%]
+tests/test_audit.py ............                                           [ 85%]
+tests/test_benchmark.py ...                                               [ 87%]
+tests/test_ai_resilience.py ..........                                     [ 93%]
+tests/test_adversarial.py ............                                     [100%]
+======================== 179 passed, 1 warning in 58.02s ========================
 ```
 
-> [!NOTE]
-> **Metric Clarification**: The deterministic engine resolves **820 cases** (82.0% coverage). Of those, **780 cases** are clean exact matches auto-resolved with zero human intervention. The remaining **40 cases** contain subtle reference typos or rounding variances that the Policy Engine isolates and safely routes to the AI Investigator.
-
-### 2. Policy Decision Distribution
-
-| Policy Tier | Volume | Percentage | Financial Exposure | Routing SOP |
-| :--- | :---: | :---: | :---: | :--- |
-| **`AUTO_RESOLVE`** | 780 | 78.0% | ₹0.00 | Instant automated ledger clearance |
-| **`AI_INVESTIGATION`** | 50 | 5.0% | ₹1.00 | Autonomous read-only evidence corroboration |
-| **`HUMAN_REVIEW`** | 40 | 4.0% | ₹249,960.00 | Assigned to operations desk triage queue |
-| **`ESCALATE`** | 130 | 13.0% | ₹859,130.50 | Escalated to financial risk and dispute desk |
-| **Total** | **1,000** | **100.0%** | **₹1,109,091.50** | Fully accounted exposure |
-
-### 3. Live Gemini Benchmark Reality
-
-During the live 50-case benchmark on `gemini-3.6-flash`:
-- **Attempted**: 50 cases
-- **Completed**: 5 cases (before provider Free Tier HTTP 429 quota exhaustion)
-- **Investigation Finding Accuracy**: **5 / 5 (100%)**
-- **Entity Linkage Accuracy**: **5 / 5 (100%)**
-- **Quota Impact**: The remaining 45 requests were blocked by Google API Free Tier rate limits (HTTP 429), not model misclassifications. All rate-limited requests cleanly and safely escalated to human review.
-
-> **Model Configuration**: `gemini-3.6-flash` was used for this specific historical benchmark via an explicit `GEMINI_MODEL_NAME` override. The repository's default model — used out-of-the-box with no override — is `gemini-2.5-flash`. See [Local Installation](#local-installation--quickstart) below to configure either.
+- **Matching Tests (51)**: Unit tests for Exact, Duplicate, Aggregation, and Fuzzy matching algorithms.
+- **Policy Engine Tests (24)**: Verification of all 12 policy decision branches and priority mappings.
+- **Investigator Tests (43)**: Unit tests for all 8 read-only query tools and agent rule synthesis.
+- **API Tests (24)**: Integration tests across dashboard, case explorer, and investigation endpoints.
+- **Audit Trail Tests (12)**: Immutability, chronological ordering, and secret sanitization tests.
+- **Benchmark Tests (3)**: Automated assertions verifying telemetry generation and metric consistency.
+- **AI Resilience Tests (10)**: Verification of rate-limit handling, timeouts, malformed responses, and iteration limits.
+- **Adversarial Red-Team Tests (12)**: Security tests proving zero financial write endpoints, ground-truth isolation, and policy immutability.
 
 ---
 
-## Canonical Demo Scenarios
-
-ReconGuard includes 1-click demo launchers directly on the dashboard for immediate judge walkthroughs:
-
-### 1. Hero Case — `CASE-000921` (`REFERENCE_MISMATCH` $\rightarrow$ `AI_INVESTIGATION`)
-- **Discrepancy**: Payment Gateway UTR is `UTR-IND-00092112`, while Bank Settlement UTR is `UTR-IND-00092121` (character transposition `12` vs `21`).
-- **Autonomous AI Workflow**:
-  1. Executes `lookup_order(order_id='ORD-000921')` $\rightarrow$ Validates order amount ₹1,299.00.
-  2. Executes `lookup_payment(payment_id='PAY-000897')` $\rightarrow$ Retrieves gateway UTR.
-  3. Executes `lookup_settlement(settlement_id='SET-000857')` $\rightarrow$ Retrieves bank UTR.
-  4. Executes `lookup_invoice` and `lookup_adjustments` $\rightarrow$ Confirms tax invoice and zero disputes.
-- **Corroborated Finding**: `VERIFIED_REFERENCE_TYPO` at 96% confidence.
-- **Advisory Output**: Recommends settlement linkage for human/system approval; zero database mutations executed.
-
-### 2. Baseline Case — `CASE-000001` (`EXACT_MATCH` $\rightarrow$ `AUTO_RESOLVE`)
-- **Status**: Clean 1:1 order/payment/settlement exact match. Auto-resolved deterministically without AI intervention with 100% confidence.
-
-### 3. High-Risk Dispute — `CASE-000853` (`CHARGEBACK` $\rightarrow$ `ESCALATE`)
-- **Status**: Chargeback adjustment recorded against gateway payment. Policy engine flags high priority and escalates immediately to the financial risk desk.
-
----
-
-## Local Installation & Quickstart
+## Quickstart
 
 ### Prerequisites
 - Python 3.11+
 - Node.js 18+ and npm
-- Optional: `GEMINI_API_KEY` for live LLM investigations (MockProvider works out-of-the-box offline)
-- Optional: `GEMINI_MODEL_NAME` to override the Gemini model used (defaults to `gemini-2.5-flash` if unset)
+- *(Optional)* Google Gemini API Key (only required for live Gemini mode; offline Mock and Demo Replay work out-of-the-box)
 
-### 1. Backend Setup
+### 1. Clone Repository & Setup Backend
 
 ```bash
-# Clone the repository
+# Clone repository
 git clone https://github.com/anya2203/ReconGuard.git
 cd ReconGuard
 
-# Create and activate virtual environment
+# Create and activate Python virtual environment
+# Windows:
 python -m venv .venv
-# On Windows:
 .\.venv\Scripts\activate
-# On Linux/macOS:
+
+# Linux / macOS:
+# python3 -m venv .venv
 # source .venv/bin/activate
 
-# Install dependencies
+# Install backend dependencies
 pip install -r requirements.txt
 
-# (Optional) Configure Gemini API Key and model
-# Set in your local environment or .env file (never committed)
-# set GEMINI_API_KEY=your_key_here
-# set GEMINI_MODEL_NAME=gemini-2.5-flash   (optional; this is already the default if unset)
+# (Optional) Configure Gemini API Key
+# Windows: set GEMINI_API_KEY=your_api_key_here
+# Linux/macOS: export GEMINI_API_KEY=your_api_key_here
 
-# Start the FastAPI backend server
+# Start FastAPI backend server
 python -m uvicorn app.main:app --host 127.0.0.1 --port 8000
 ```
-Backend Swagger API documentation will be available at `http://127.0.0.1:8000/docs`.
+Backend API documentation will be available at `http://127.0.0.1:8000/docs`.
 
-### 2. Frontend Setup
+### 2. Setup & Start Frontend
 
 ```bash
 # In a new terminal window:
 cd frontend
 
-# Install Node packages
+# Install dependencies
 npm install
 
-# Start the Vite development server
+# Start Vite development server
 npm run dev -- --port 3000
 ```
-Open `http://127.0.0.1:3000` in your browser to interact with the console.
+Open `http://127.0.0.1:3000` in your browser.
 
-### 3. Automated Verification & Testing
+### 3. Run Automated Verification
 
 ```bash
-# Run the complete Python test suite (141 tests)
+# Run complete test suite (179 tests)
 python -m pytest -q
 
-# Verify clean bytecode compilation (0 errors)
-python -m compileall app
+# Run benchmark evaluation
+python evaluation/run_benchmark.py
 
-# Run the frontend production build
+# Verify frontend production build
 cd frontend
 npm run build
 ```
 
 ---
 
-## Repository Structure
+## API Reference
+
+The FastAPI backend exposes read-only query routes and an investigation trigger:
+
+| Method | Endpoint | Purpose | Write Authority |
+| :--- | :--- | :--- | :---: |
+| `GET` | `/health` / `/api/health` | Service health status check | Read-Only |
+| `GET` | `/api/dashboard/summary` | Executive KPI and financial exposure summary | Read-Only |
+| `GET` | `/api/dashboard/benchmark` | Verified benchmark evaluation metrics | Read-Only |
+| `GET` | `/api/cases` | Filterable, paginated case explorer feed | Read-Only |
+| `GET` | `/api/cases/{case_id}` | Detailed case record and policy decision | Read-Only |
+| `GET` | `/api/cases/{case_id}/evidence` | Linked transaction evidence across data feeds | Read-Only |
+| `GET` | `/api/investigations` | List of historical AI investigation findings | Read-Only |
+| `GET` | `/api/investigations/{case_id}` | Investigation details and tool execution trace | Read-Only |
+| `POST`| `/api/cases/{case_id}/investigate` | Trigger read-only AI investigation workflow | Read-Only (0 writes) |
+| `GET` | `/api/audit` | System-wide audit event feed | Read-Only |
+| `GET` | `/api/audit/{case_id}` | Chronological audit trail timeline for a case | Read-Only |
+
+**Total Financial Write / Mutation Endpoints**: **0**
+
+---
+
+## Project Structure
 
 ```
 ReconGuard/
-├── app/
-│   ├── api/                     # FastAPI routes, schemas, and dependencies
-│   │   ├── routes/              # /dashboard, /cases, /investigations, /health
-│   │   └── schemas/             # Pydantic request/response models
-│   ├── evaluation/              # Ground-truth evaluation benchmarks & metrics
-│   ├── investigator/            # Autonomous AI agent, tools, and providers
-│   │   ├── agent.py             # Multi-turn agent loop coordinator
-│   │   ├── providers.py         # GeminiProvider (GenAI SDK) & MockProvider
-│   │   ├── tools.py             # 8 read-only operational tool implementations
-│   │   └── types.py             # FindingTaxonomy and investigation schemas
-│   ├── matching/                # Deterministic reconciliation engine & matchers
-│   ├── models/                  # Operational entity dataclasses
-│   ├── policy/                  # PolicyEngine risk classifier & ExceptionQueue
-│   ├── services/                # Singleton ReconciliationService bridge
-│   └── main.py                  # FastAPI application entrypoint
+├── app/                         # Backend implementation (FastAPI, SQLite, SQLAlchemy)
+│   ├── api/                     # REST API routes and Pydantic v2 schemas
+│   ├── investigator/            # Autonomous AI agent (8 read-only tools, Gemini, Mock, Demo Replay)
+│   ├── matching/                # Deterministic matching engine (Exact, Duplicate, Aggregation, Fuzzy)
+│   ├── models/                  # Operational entity dataclasses & AuditLog model
+│   ├── policy/                  # Deterministic 12-branch PolicyEngine & ExceptionQueue
+│   └── services/                # Singleton ReconciliationService & Audit trail manager
 │
-├── frontend/                    # React 19 + TypeScript + Vite + Tailwind CSS SPA
-│   ├── src/
-│   │   ├── components/          # Cards, Badges, Formatters, States, Workflow
-│   │   ├── pages/               # Overview, CaseExplorer, CaseDetail, Investigations
-│   │   ├── services/            # Typed API client
-│   │   └── types/               # TypeScript interface schemas matching backend
-│   └── vite.config.ts           # Vite build & proxy configuration
+├── frontend/                    # Production dashboard (React 19, TypeScript, Vite, Tailwind CSS)
+│   ├── src/components/          # ControllerHealth, BenchmarkMetricsCard, AuditTrail, AIBoundary
+│   └── src/pages/               # OverviewPage, CaseExplorerPage, CaseDetailPage, InvestigationsPage
 │
-├── data/
-│   ├── generated/               # Synthetic operational feeds (CSV)
-│   └── ground_truth/            # Independent benchmark ground truth (CSV)
+├── dashboard-design/            # UX documentation, information architecture, & component specs
+│   ├── README.md                # Dashboard product overview & core UX narrative
+│   ├── information-architecture.md # Navigation hierarchy and component data flow
+│   └── dashboard-spec.md        # Master component specification & safety guarantees
 │
-├── evaluation/
-│   └── results/                 # Verified evaluation artifacts & JSON benchmarks
-├── docs/                        # Technical architecture & daily milestones
-└── tests/                       # 141 automated unit, integration, & AST tests
+├── evaluation/                  # Benchmark scripts and evaluation results
+│   ├── run_benchmark.py         # Standalone end-to-end benchmark evaluation script
+│   └── results/                 # Machine-readable JSON and Markdown benchmark reports
+│
+├── docs/                        # Architecture, audit trail specifications, & design decisions
+│   └── submission/              # Buildathon pitch deck, 5-minute demo script, & Judge FAQ
+│
+├── data/                        # Synthetic operational data feeds & independent ground truth
+│   ├── generated/               # Orders, payments, settlements, invoices, adjustments CSVs
+│   └── ground_truth/            # Independent evaluation labels (isolated from runtime)
+│
+└── tests/                       # 179 automated tests across matching, policy, AI, API, and safety
 ```
 
 ---
 
-## Honest Limitations
+## Limitations
 
-1. **Synthetic Operational Dataset**: The dataset is a controlled, deterministic simulation modeling 13 realistic anomaly scenarios; it is not live production bank data.
-2. **LLM Provider Quota Limits**: Live multi-turn tool calling on Google Gemini Free Tier is subject to strict per-minute quota limits. `MockProvider` is provided for deterministic, zero-quota evaluation and testing.
-3. **Strict Read-Only Scope**: ReconGuard deliberately avoids executing automated financial mutations (no payouts, no balance adjustments). Real-world accounting integrations require an external human approval workflow.
+1. **Synthetic Operational Dataset**: Evaluated on 1,000 synthetic operational records modeling 13 anomaly scenarios rather than live banking data with PII.
+2. **LLM Free Tier Quota Limits**: Live Gemini investigations are constrained by upstream API rate limits. `DemoReplayProvider` and `MockProvider` are provided for deterministic evaluation and testing.
+3. **Strictly Read-Only Scope**: ReconGuard does not automatically execute payouts, balance deductions, or ledger updates. Financial actions require human or external accounting system signoff.
+4. **Financial Exposure vs. Recovery**: The ₹1,109,091.50 figure represents identified gross monetary variance across exception queues, not guaranteed recovered revenue.
 
 ---
 
-## License
+## Buildathon Judging Alignment
 
-This project was built for the **Razorpay Buildathon 2026** under the Apache 2.0 License.
+| Evaluation Criteria | ReconGuard Implementation & Proof |
+| :--- | :--- |
+| **Problem Taste** | Solves high-volume payment reconciliation by pairing deterministic matching for clean cases with targeted AI investigation for complex edge cases. |
+| **Build Quality** | Complete working stack: FastAPI backend, 179 passing tests, React 19 + TypeScript frontend, and 0 financial write endpoints. |
+| **AI Judgment** | Uses AI only where deterministic rules break (reference typos, rounding variances, omitted invoices). Agent is restricted to 8 read-only tools. |
+| **Failure Recovery** | Rate limits, timeouts, and malformed responses fail safely to `INCONCLUSIVE` and route directly to human triage without altering policy decisions. |
+
+---
+
+## Demo Flow
+
+A 5-minute judge walkthrough covers:
+
+1. **Executive Dashboard**: Review total volume (1,000 cases), straight-through auto-resolutions (780 cases), and active financial exposure (₹1.109M).
+2. **Clean Deterministic Case (`CASE-000001`)**: Inspect an exact 1:1 match resolved straight-through via `AUTO_RESOLVE` with zero AI tokens used.
+3. **Hero AI Case (`CASE-000921`)**: Run an autonomous investigation on a transposed UTR reference discrepancy (`...12` vs `...21`), inspecting the 5-step read-only tool trace and finding.
+4. **Fail-Safe Degradation**: Trigger a simulated provider error to verify graceful degradation to `INCONCLUSIVE` and `OPERATIONS_DESK` escalation.
+5. **Benchmark Telemetry & Audit Trail**: Inspect the chronological audit timeline and reproducible benchmark report.
+
+---
+
+## Buildathon Context
+
+Built for the **Razorpay AI Buildathon 2026** — *Track 04: AI Finance Controller*.  
+Licensed under the Apache 2.0 License.

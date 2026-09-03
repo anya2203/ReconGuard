@@ -94,6 +94,22 @@ class TestDashboardAPI:
         assert isinstance(data["financial_impact_by_decision"], dict)
         assert isinstance(data["financial_impact_by_priority"], dict)
 
+    def test_dashboard_benchmark_metrics(self):
+        """Test GET /api/dashboard/benchmark returns verified Phase 1 metrics."""
+        response = client.get("/api/dashboard/benchmark")
+        assert response.status_code == 200
+        data = response.json()
+
+        assert data["total_records"] == 1000
+        assert data["deterministic_coverage"] == 0.82
+        assert data["deterministic_correctness"] == 0.9512
+        assert data["classification_accuracy"] == 0.939
+        assert data["binary_exception_f1"] == 1.0
+        assert data["payment_linkage_f1"] == 1.0
+        assert data["settlement_linkage_f1"] == 0.9484
+        assert data["total_exposure_identified"] == 1109091.50
+        assert data["deterministic_throughput_rps"] > 500
+
 
 class TestCasesAPI:
     """Test Cases list, filtering, pagination, and detail endpoints."""

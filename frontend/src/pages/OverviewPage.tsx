@@ -4,10 +4,10 @@ import {
   CheckCircle2,
   Bot,
   UserCheck,
-  AlertTriangle,
   ArrowRight,
   ShieldAlert,
   Layers,
+  Scale,
 } from "lucide-react";
 import { api } from "../services/api";
 import type { CaseSummary, DashboardSummary } from "../types/api";
@@ -15,6 +15,8 @@ import { Card } from "../components/common/Card";
 import { DecisionBadge, PriorityBadge } from "../components/common/Badge";
 import { FormatMoney, formatINR } from "../components/common/FormatMoney";
 import { ErrorState, LoadingState } from "../components/common/States";
+import { ControllerHealth } from "../components/dashboard/ControllerHealth";
+import { BenchmarkMetricsCard } from "../components/dashboard/BenchmarkMetricsCard";
 
 export const OverviewPage: React.FC = () => {
   const [summary, setSummary] = useState<DashboardSummary | null>(null);
@@ -49,17 +51,22 @@ export const OverviewPage: React.FC = () => {
 
   const autoResolvePercent = ((summary.auto_resolved / summary.total_cases) * 100).toFixed(1);
   const aiPercent = ((summary.ai_investigation / summary.total_cases) * 100).toFixed(1);
-  const humanPercent = ((summary.human_review / summary.total_cases) * 100).toFixed(1);
-  const escalatePercent = ((summary.escalated / summary.total_cases) * 100).toFixed(1);
+  const humanEscalateCombined = summary.human_review + summary.escalated;
+  const humanEscalatePercent = ((humanEscalateCombined / summary.total_cases) * 100).toFixed(1);
 
   return (
     <div className="space-y-6">
-      {/* Product Subtitle Banner */}
+      {/* Product Mission & Core Narrative Banner */}
       <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
-        <div>
-          <h1 className="text-lg font-bold text-slate-900 tracking-tight">Reconciliation Overview</h1>
-          <p className="text-xs text-slate-500 mt-1">
-            Deterministic matching first. AI investigation only for complex discrepancies. Zero financial mutations.
+        <div className="space-y-1">
+          <div className="flex items-center gap-2">
+            <span className="px-2 py-0.5 bg-slate-900 text-white rounded text-[10px] font-mono font-bold tracking-wider uppercase">
+              RECONGUARD
+            </span>
+            <h1 className="text-base font-bold text-slate-900 tracking-tight">AI Finance Controller</h1>
+          </div>
+          <p className="text-xs text-slate-600 max-w-3xl leading-relaxed">
+            ReconGuard reconciles what can be proven, investigates what is ambiguous, and keeps high-risk financial decisions under deterministic policy and human control.
           </p>
         </div>
         <div className="flex items-center gap-2">
@@ -72,6 +79,67 @@ export const OverviewPage: React.FC = () => {
           </Link>
         </div>
       </div>
+
+      {/* Controller Health Status */}
+      <ControllerHealth />
+
+      {/* Primary KPI Cards */}
+      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
+        {/* A. RECORDS PROCESSED */}
+        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
+          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
+            <span>Records Processed</span>
+            <Layers className="w-4 h-4 text-slate-400" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">{summary.total_cases.toLocaleString()}</div>
+          <div className="text-[11px] text-slate-500 mt-1">100% Volume Accounted</div>
+        </div>
+
+        {/* B. AUTO RESOLVED */}
+        <div className="bg-white border border-emerald-100 rounded-lg p-4 shadow-xs bg-emerald-50/20">
+          <div className="flex items-center justify-between text-emerald-800 text-xs font-medium">
+            <span>Auto Resolved</span>
+            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-emerald-700 font-mono">{summary.auto_resolved.toLocaleString()}</div>
+          <div className="text-[11px] text-emerald-600 font-medium mt-1">{autoResolvePercent}% Deterministic Match</div>
+        </div>
+
+        {/* C. AI INVESTIGATION */}
+        <div className="bg-white border border-sky-100 rounded-lg p-4 shadow-xs bg-sky-50/20">
+          <div className="flex items-center justify-between text-sky-800 text-xs font-medium">
+            <span>AI Investigation</span>
+            <Bot className="w-4 h-4 text-sky-600" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-sky-700 font-mono">{summary.ai_investigation.toLocaleString()}</div>
+          <div className="text-[11px] text-sky-600 font-medium mt-1">{aiPercent}% Evidence Verified</div>
+        </div>
+
+        {/* D. HUMAN / ESCALATED */}
+        <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-xs bg-amber-50/20">
+          <div className="flex items-center justify-between text-amber-800 text-xs font-medium">
+            <span>Human / Escalated</span>
+            <UserCheck className="w-4 h-4 text-amber-600" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-amber-700 font-mono">{humanEscalateCombined.toLocaleString()}</div>
+          <div className="text-[11px] text-amber-700 font-medium mt-1">{humanEscalatePercent}% Ops Desk & Risk Queue</div>
+        </div>
+
+        {/* E. FINANCIAL EXPOSURE */}
+        <div className="bg-white border border-rose-100 rounded-lg p-4 shadow-xs bg-rose-50/20 col-span-2 md:col-span-1">
+          <div className="flex items-center justify-between text-rose-800 text-xs font-medium">
+            <span>Financial Exposure</span>
+            <Scale className="w-4 h-4 text-rose-600" />
+          </div>
+          <div className="mt-2 text-2xl font-bold text-rose-700 font-mono">
+            {formatINR(summary.total_financial_exposure)}
+          </div>
+          <div className="text-[11px] text-rose-600 font-medium mt-1">Identified Exception Value</div>
+        </div>
+      </div>
+
+      {/* Verified Benchmark & Performance Telemetry Card */}
+      <BenchmarkMetricsCard />
 
       {/* Canonical Demo Scenarios Quick-Launcher Card */}
       <Card
@@ -156,55 +224,7 @@ export const OverviewPage: React.FC = () => {
         </div>
       </Card>
 
-      {/* Primary KPI Cards */}
-      <div className="grid grid-cols-2 md:grid-cols-5 gap-3.5">
-        <div className="bg-white border border-slate-200 rounded-lg p-4 shadow-xs">
-          <div className="flex items-center justify-between text-slate-500 text-xs font-medium">
-            <span>Total Cases</span>
-            <Layers className="w-4 h-4 text-slate-400" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-slate-900 font-mono">{summary.total_cases.toLocaleString()}</div>
-          <div className="text-[11px] text-slate-400 mt-1">100% Operational Volume</div>
-        </div>
-
-        <div className="bg-white border border-emerald-100 rounded-lg p-4 shadow-xs bg-emerald-50/20">
-          <div className="flex items-center justify-between text-emerald-800 text-xs font-medium">
-            <span>Auto Resolved</span>
-            <CheckCircle2 className="w-4 h-4 text-emerald-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-emerald-700 font-mono">{summary.auto_resolved.toLocaleString()}</div>
-          <div className="text-[11px] text-emerald-600 font-medium mt-1">{autoResolvePercent}% Deterministic Match</div>
-        </div>
-
-        <div className="bg-white border border-sky-100 rounded-lg p-4 shadow-xs bg-sky-50/20">
-          <div className="flex items-center justify-between text-sky-800 text-xs font-medium">
-            <span>AI Investigation</span>
-            <Bot className="w-4 h-4 text-sky-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-sky-700 font-mono">{summary.ai_investigation.toLocaleString()}</div>
-          <div className="text-[11px] text-sky-600 font-medium mt-1">{aiPercent}% Evidence Verified</div>
-        </div>
-
-        <div className="bg-white border border-amber-100 rounded-lg p-4 shadow-xs bg-amber-50/20">
-          <div className="flex items-center justify-between text-amber-800 text-xs font-medium">
-            <span>Human Review</span>
-            <UserCheck className="w-4 h-4 text-amber-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-amber-700 font-mono">{summary.human_review.toLocaleString()}</div>
-          <div className="text-[11px] text-amber-600 font-medium mt-1">{humanPercent}% Ops Desk Queue</div>
-        </div>
-
-        <div className="bg-white border border-rose-100 rounded-lg p-4 shadow-xs bg-rose-50/20 col-span-2 md:col-span-1">
-          <div className="flex items-center justify-between text-rose-800 text-xs font-medium">
-            <span>Escalated</span>
-            <AlertTriangle className="w-4 h-4 text-rose-600" />
-          </div>
-          <div className="mt-2 text-2xl font-bold text-rose-700 font-mono">{summary.escalated.toLocaleString()}</div>
-          <div className="text-[11px] text-rose-600 font-medium mt-1">{escalatePercent}% High-Risk Exceptions</div>
-        </div>
-      </div>
-
-      {/* Financial Overview & Policy Breakdown */}
+      {/* Financial Exposure & Policy Distribution Breakdown */}
       <div className="grid grid-cols-1 lg:grid-cols-3 gap-6">
         {/* Financial Exposure Card */}
         <Card
@@ -215,7 +235,7 @@ export const OverviewPage: React.FC = () => {
           <div className="space-y-5">
             <div className="bg-slate-50 border border-slate-200 rounded-md p-4 flex flex-col sm:flex-row sm:items-center justify-between gap-2">
               <div>
-                <span className="text-xs text-slate-500 font-medium">Total Exception Financial Exposure</span>
+                <span className="text-xs text-slate-500 font-medium">Total Exception Financial Exposure Identified</span>
                 <div className="text-2xl font-bold text-slate-900 font-mono mt-0.5">
                   <FormatMoney amount={summary.total_financial_exposure} />
                 </div>
@@ -237,7 +257,7 @@ export const OverviewPage: React.FC = () => {
                 <div className="text-sm font-semibold text-slate-800 font-mono mt-1">
                   {formatINR(summary.financial_impact_by_decision["AUTO_RESOLVE"] || 0)}
                 </div>
-                <div className="text-[10px] text-slate-400 mt-0.5">780 cases</div>
+                <div className="text-[10px] text-slate-400 mt-0.5">780 cases (₹0.00)</div>
               </div>
 
               <div className="p-3 bg-white border border-slate-200 rounded-md">
@@ -270,7 +290,7 @@ export const OverviewPage: React.FC = () => {
         {/* Engine Match Classification */}
         <Card
           title="Engine Reconciliation Breakdown"
-          subtitle="Deterministic match classifications from Day 3 pipeline"
+          subtitle="Deterministic match classifications from rule-based engine"
         >
           <div className="space-y-3.5">
             <div className="flex items-center justify-between text-xs pb-2 border-b border-slate-100">
@@ -336,7 +356,7 @@ export const OverviewPage: React.FC = () => {
                 <th className="py-2.5 px-3">Exception Category</th>
                 <th className="py-2.5 px-3">Priority</th>
                 <th className="py-2.5 px-3">Policy Decision</th>
-                <th className="py-2.5 px-3 text-right">Financial Impact</th>
+                <th className="py-2.5 px-3 text-right">Financial Exposure</th>
                 <th className="py-2.5 px-3 text-right">Action</th>
               </tr>
             </thead>

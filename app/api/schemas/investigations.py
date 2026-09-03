@@ -33,11 +33,12 @@ class InvestigationResponse(BaseModel):
     supporting_payment_ids: list[str] = Field(default_factory=list)
     supporting_settlement_ids: list[str] = Field(default_factory=list)
     supporting_invoice_id: str | None = None
-    investigation_status: str = Field(..., description="Status: COMPLETED, INCONCLUSIVE, or FAILED")
+    investigation_status: str = Field(..., description="Status: COMPLETED, INCONCLUSIVE, FAILED, RATE_LIMITED, etc.")
+    error_category: str | None = Field(None, description="Granular error classification category")
+    failure_reason: str | None = Field(None, description="Detailed failure or rate limit narrative")
     tool_trace: list[ToolCallRecordSchema] = Field(default_factory=list)
-    provider_used: str = Field("mock", description="Provider used: 'mock' or 'gemini'")
+    provider_used: str = Field("mock", description="Provider used: 'mock', 'demo_replay', or 'gemini'")
     created_at: str = Field(..., description="ISO 8601 creation timestamp")
-
 
 class InvestigationListResponse(BaseModel):
     """List response of completed investigations."""

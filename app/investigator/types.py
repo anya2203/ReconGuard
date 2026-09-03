@@ -19,11 +19,17 @@ class FindingTaxonomy(str, Enum):
 
 
 class InvestigationStatus(str, Enum):
-    """Execution status of an AI investigation."""
+    """Execution status and failure categories of an AI investigation."""
 
     COMPLETED = "COMPLETED"
     INCONCLUSIVE = "INCONCLUSIVE"
     FAILED = "FAILED"
+    RATE_LIMITED = "RATE_LIMITED"
+    PROVIDER_ERROR = "PROVIDER_ERROR"
+    MALFORMED_RESPONSE = "MALFORMED_RESPONSE"
+    ITERATION_LIMIT = "ITERATION_LIMIT"
+    CONFIGURATION_ERROR = "CONFIGURATION_ERROR"
+    TIMEOUT = "TIMEOUT"
 
 
 @dataclass
@@ -105,6 +111,8 @@ class InvestigationResult:
     supporting_settlement_ids: list[str] = field(default_factory=list)
     supporting_invoice_id: str | None = None
     investigation_status: InvestigationStatus = InvestigationStatus.COMPLETED
+    error_category: str | None = None
+    failure_reason: str | None = None
     tool_trace: list[ToolCallRecord] = field(default_factory=list)
     provider_used: str = "mock"
     created_at: str = field(default_factory=lambda: datetime.now(timezone.utc).isoformat())
@@ -123,6 +131,8 @@ class InvestigationResult:
             "supporting_settlement_ids": self.supporting_settlement_ids,
             "supporting_invoice_id": self.supporting_invoice_id,
             "investigation_status": self.investigation_status.value if hasattr(self.investigation_status, "value") else str(self.investigation_status),
+            "error_category": self.error_category,
+            "failure_reason": self.failure_reason,
             "tool_trace": [t.to_dict() for t in self.tool_trace],
             "provider_used": self.provider_used,
             "created_at": self.created_at,

@@ -1,4 +1,6 @@
 import type {
+  BenchmarkMetrics,
+  CaseAuditTrail,
   CaseDetail,
   CaseListResponse,
   DashboardSummary,
@@ -93,5 +95,11 @@ export const api = {
       method: "POST",
       body: JSON.stringify({ provider }),
     }),
+
+  getAuditTrail: (caseId: string) =>
+    request<CaseAuditTrail>(`/api/audit/${encodeURIComponent(caseId)}`),
+
+  getBenchmarkMetrics: () =>
+    request<BenchmarkMetrics>("/api/dashboard/benchmark"),
 };
 

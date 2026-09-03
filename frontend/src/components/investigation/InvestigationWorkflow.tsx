@@ -10,6 +10,7 @@ import {
   Terminal,
   AlertCircle,
   ShieldCheck,
+  Zap,
 } from "lucide-react";
 import { api } from "../../services/api";
 import type { CaseDetail, InvestigationResponse } from "../../types/api";
@@ -25,7 +26,7 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
   existingInvestigation,
   onInvestigationComplete,
 }) => {
-  const [provider, setProvider] = useState<string>("mock");
+  const [provider, setProvider] = useState<string>("demo_replay");
   const [status, setStatus] = useState<"idle" | "investigating" | "completed" | "failed">(
     existingInvestigation ? "completed" : "idle"
   );
@@ -39,7 +40,8 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
     try {
       const res = await api.investigateCase(caseData.case_id, provider);
       setResult(res);
-      setStatus(res.investigation_status === "COMPLETED" ? "completed" : "failed");
+      const isOk = res.investigation_status === "COMPLETED";
+      setStatus(isOk ? "completed" : "failed");
       onInvestigationComplete(res);
     } catch (err: unknown) {
       const msg = err instanceof Error ? err.message : "Investigation failed to execute.";
@@ -48,22 +50,46 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
     }
   };
 
+  const getProviderBadge = (p: string) => {
+    switch (p.toLowerCase()) {
+      case "demo_replay":
+      case "replay":
+        return (
+          <span className="px-2 py-0.5 bg-sky-100 text-sky-800 rounded font-mono font-semibold text-[10px] border border-sky-200">
+            DEMO REPLAY (PRE-RECORDED)
+          </span>
+        );
+      case "gemini":
+        return (
+          <span className="px-2 py-0.5 bg-purple-100 text-purple-800 rounded font-mono font-semibold text-[10px] border border-purple-200">
+            LIVE GEMINI (GENAI SDK)
+          </span>
+        );
+      default:
+        return (
+          <span className="px-2 py-0.5 bg-slate-100 text-slate-700 rounded font-mono font-semibold text-[10px] border border-slate-200">
+            MOCK PROVIDER (OFFLINE)
+          </span>
+        );
+    }
+  };
+
   return (
     <div className="bg-white border border-slate-200 rounded-lg shadow-xs overflow-hidden">
       {/* Header */}
-      <div className="px-5 py-4 border-b border-slate-100 flex items-center justify-between bg-slate-50/50">
+      <div className="px-5 py-4 border-b border-slate-100 flex flex-col sm:flex-row sm:items-center justify-between gap-2 bg-slate-50/50">
         <div className="flex items-center gap-2.5">
-          <div className="w-7 h-7 rounded-md bg-sky-100 text-sky-700 flex items-center justify-center">
-            <Bot className="w-4 h-4 text-sky-600" />
+          <div className="w-7 h-7 rounded-md bg-indigo-100 text-indigo-700 flex items-center justify-center">
+            <Bot className="w-4 h-4 text-indigo-600" />
           </div>
           <div>
             <h3 className="text-sm font-bold text-slate-900 tracking-tight">AI Investigator Workflow</h3>
-            <p className="text-xs text-slate-500">Autonomous evidence corroboration & advisory root-cause analysis</p>
+            <p className="text-xs text-slate-500">Autonomous read-only evidence corroboration & root-cause analysis</p>
           </div>
         </div>
 
         <div className="flex items-center gap-1.5 px-2.5 py-1 bg-slate-100 border border-slate-200 rounded text-[11px] font-medium text-slate-600">
-          <Lock className="w-3 h-3 text-sky-600" />
+          <Lock className="w-3 h-3 text-indigo-600" />
           <span>Strictly Read-Only (0 Write Tools)</span>
         </div>
       </div>
@@ -78,16 +104,27 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
                 Case Eligible for AI Investigation
               </div>
               <p className="text-slate-700 leading-relaxed">
-                Deterministic matching routed <strong className="font-mono">{caseData.case_id}</strong> to AI investigation because{" "}
+                Deterministic policy routed <strong className="font-mono">{caseData.case_id}</strong> to AI investigation because{" "}
                 {caseData.reason.toLowerCase() || "a manageable reference or amount discrepancy was detected"}. The investigator will autonomously inspect orders, payments, settlements, invoices, and adjustments.
               </p>
             </div>
 
             {/* Provider Selection Bar */}
-            <div className="flex flex-col sm:flex-row sm:items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs">
-              <div className="flex items-center gap-2">
-                <span className="text-slate-600 font-medium">Investigation Provider:</span>
-                <div className="flex items-center gap-1 bg-white border border-slate-200 rounded p-0.5">
+            <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 p-3 bg-slate-50 border border-slate-200 rounded-md text-xs">
+              <div className="flex flex-col sm:flex-row sm:items-center gap-2">
+                <span className="text-slate-700 font-semibold">Select Provider:</span>
+                <div className="flex flex-wrap items-center gap-1 bg-white border border-slate-200 rounded p-0.5">
+                  <button
+                    type="button"
+                    onClick={() => setProvider("demo_replay")}
+                    className={`px-2.5 py-1 rounded text-xs font-medium transition-colors cursor-pointer ${
+                      provider === "demo_replay"
+                        ? "bg-slate-900 text-white shadow-xs"
+                        : "text-slate-600 hover:text-slate-900"
+                    }`}
+                  >
+                    Demo Replay (Judge Walkthrough)
+                  </button>
                   <button
                     type="button"
                     onClick={() => setProvider("mock")}
@@ -97,7 +134,7 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Mock Simulation (Fast Demo)
+                    Mock Provider (Offline Eval)
                   </button>
                   <button
                     type="button"
@@ -108,7 +145,7 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
                         : "text-slate-600 hover:text-slate-900"
                     }`}
                   >
-                    Live Gemini API (gemini-3.6-flash)
+                    Live Gemini (Subject to Quotas)
                   </button>
                 </div>
               </div>
@@ -116,9 +153,9 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
               <button
                 type="button"
                 onClick={handleRunInvestigation}
-                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-sky-600 hover:bg-sky-700 text-white rounded text-xs font-medium transition-colors shadow-xs cursor-pointer shrink-0"
+                className="inline-flex items-center justify-center gap-1.5 px-4 py-2 bg-indigo-600 hover:bg-indigo-700 text-white rounded text-xs font-medium transition-colors shadow-xs cursor-pointer shrink-0"
               >
-                <Bot className="w-3.5 h-3.5" />
+                <Zap className="w-3.5 h-3.5" />
                 Run AI Investigation
               </button>
             </div>
@@ -128,7 +165,7 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
         {/* STATE 2: INVESTIGATING */}
         {status === "investigating" && (
           <div className="p-8 flex flex-col items-center justify-center text-center space-y-3 bg-slate-50/50 border border-slate-100 rounded-md">
-            <RefreshCw className="w-7 h-7 text-sky-600 animate-spin" />
+            <RefreshCw className="w-7 h-7 text-indigo-600 animate-spin" />
             <div>
               <h4 className="text-sm font-semibold text-slate-900">Executing Read-Only AI Investigation...</h4>
               <p className="text-xs text-slate-500 mt-1 max-w-md">
@@ -152,7 +189,7 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
                   </span>
                 </div>
                 <div className="flex items-center gap-3">
-                  <span className="text-slate-500 text-[11px]">Provider: <strong className="font-mono text-slate-700">{result.provider_used}</strong></span>
+                  {getProviderBadge(result.provider_used)}
                   <span className="px-2 py-0.5 bg-emerald-100 text-emerald-800 rounded font-mono font-semibold text-xs">
                     Confidence: {(result.confidence * 100).toFixed(0)}%
                   </span>
@@ -206,10 +243,10 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
               </div>
               <button
                 type="button"
-                onClick={handleRunInvestigation}
+                onClick={() => setStatus("idle")}
                 className="text-sky-600 hover:text-sky-800 font-medium cursor-pointer underline text-[11px]"
               >
-                Re-run Investigation
+                Re-run / Switch Provider
               </button>
             </div>
 
@@ -279,24 +316,44 @@ export const InvestigationWorkflow: React.FC<InvestigationWorkflowProps> = ({
           </div>
         )}
 
-        {/* STATE 4: FAILED / FALLBACK */}
+        {/* STATE 4: FAILED / SAFE HUMAN ESCALATION */}
         {status === "failed" && (
-          <div className="p-4 bg-rose-50 border border-rose-200 rounded-md space-y-3 text-xs">
-            <div className="flex items-center gap-2 text-rose-900 font-semibold">
-              <AlertCircle className="w-4 h-4 text-rose-600" />
-              Investigation Inconclusive or Provider Rate-Limited
+          <div className="p-4 bg-amber-50/70 border border-amber-200 rounded-md space-y-3 text-xs">
+            <div className="flex items-center justify-between pb-2 border-b border-amber-200 text-amber-900 font-semibold">
+              <div className="flex items-center gap-2">
+                <AlertCircle className="w-4 h-4 text-amber-600" />
+                <span>AI Inconclusive / Provider Failure $\rightarrow$ Safe Human Review Escalated</span>
+              </div>
+              <span className="px-2 py-0.5 bg-amber-100 text-amber-800 rounded font-mono text-[10px] uppercase">
+                {result?.investigation_status || "PROVIDER_ERROR"}
+              </span>
             </div>
-            <p className="text-rose-700 leading-relaxed">
-              {errorMessage || result?.root_cause || "Provider returned an error or exceeded request quota. The case has been automatically escalated for human operations review."}
-            </p>
-            <div className="flex items-center justify-between pt-2 border-t border-rose-200 text-rose-800">
-              <span>Status: <strong>Requires Human Review</strong></span>
+
+            <div className="space-y-1 text-amber-800">
+              <div className="font-medium text-slate-800">Failure Explanation:</div>
+              <p className="leading-relaxed bg-white border border-amber-200 rounded p-2.5">
+                {errorMessage || result?.failure_reason || result?.root_cause || "Provider returned an error or rate limit. The financial case remains strictly under human operations control."}
+              </p>
+            </div>
+
+            <div className="p-2.5 bg-emerald-50/60 border border-emerald-200 rounded text-emerald-900 text-[11px] flex items-center gap-2">
+              <ShieldCheck className="w-4 h-4 text-emerald-600 shrink-0" />
+              <span>
+                <strong>Safety Invariant Preserved:</strong> AI failure did NOT alter or auto-resolve the financial decision. Zero financial writes occurred.
+              </span>
+            </div>
+
+            <div className="flex items-center justify-between pt-2 border-t border-amber-200 text-amber-900">
+              <span>Control Desk: <strong>OPERATIONS_DESK</strong></span>
               <button
                 type="button"
-                onClick={handleRunInvestigation}
-                className="px-3 py-1 bg-rose-600 hover:bg-rose-700 text-white rounded text-xs font-medium cursor-pointer"
+                onClick={() => {
+                  setProvider("demo_replay");
+                  setStatus("idle");
+                }}
+                className="px-3 py-1 bg-slate-900 hover:bg-slate-800 text-white rounded text-xs font-medium cursor-pointer"
               >
-                Retry with Mock
+                Switch to Demo Replay
               </button>
             </div>
           </div>

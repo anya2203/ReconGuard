@@ -11,16 +11,19 @@ import {
   Scale,
   ShoppingCart,
   ShieldAlert,
-  AlertTriangle,
   Info,
+  Bot,
+  UserCheck,
 } from "lucide-react";
 import { api } from "../services/api";
-import type { CaseDetail, EvidenceResponse, InvestigationResponse } from "../types/api";
 import { Card } from "../components/common/Card";
 import { DecisionBadge, PriorityBadge } from "../components/common/Badge";
 import { formatINR } from "../components/common/FormatMoney";
 import { ErrorState, LoadingState } from "../components/common/States";
 import { InvestigationWorkflow } from "../components/investigation/InvestigationWorkflow";
+import { AuditTrailTimeline } from "../components/audit/AuditTrailTimeline";
+import { AIBoundaryPanel } from "../components/investigation/AIBoundaryPanel";
+import type { CaseAuditTrail, CaseDetail, EvidenceResponse, InvestigationResponse } from "../types/api";
 
 export const CaseDetailPage: React.FC = () => {
   const { caseId } = useParams<{ caseId: string }>();
@@ -28,6 +31,7 @@ export const CaseDetailPage: React.FC = () => {
   const [caseData, setCaseData] = useState<CaseDetail | null>(null);
   const [evidenceData, setEvidenceData] = useState<EvidenceResponse | null>(null);
   const [existingInvestigation, setExistingInvestigation] = useState<InvestigationResponse | null>(null);
+  const [auditTrail, setAuditTrail] = useState<CaseAuditTrail | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [error, setError] = useState<string | null>(null);
   const [showEvidenceRaw, setShowEvidenceRaw] = useState<boolean>(false);
@@ -37,12 +41,14 @@ export const CaseDetailPage: React.FC = () => {
     setLoading(true);
     setError(null);
     try {
-      const [cRes, evRes] = await Promise.all([
+      const [cRes, evRes, auditRes] = await Promise.all([
         api.getCaseDetail(caseId),
         api.getCaseEvidence(caseId).catch(() => null),
+        api.getAuditTrail(caseId).catch(() => null),
       ]);
       setCaseData(cRes);
       setEvidenceData(evRes);
+      setAuditTrail(auditRes);
 
       // Check if investigation exists
       try {
@@ -73,6 +79,11 @@ export const CaseDetailPage: React.FC = () => {
   const settlementUtr = tx?.settlements?.[0]?.utr;
   const isReferenceMismatch = caseData.exception_type === "REFERENCE_MISMATCH" && paymentUtr && settlementUtr;
 
+  // Expected vs actual calculations
+  const orderAmt = tx?.order?.amount ?? 0;
+  const settlementAmt = tx?.settlements?.[0]?.net_amount ?? tx?.settlements?.[0]?.amount ?? 0;
+  const varianceAmt = caseData.financial_impact;
+
   return (
     <div className="space-y-6">
       {/* Navigation Breadcrumb */}
@@ -94,38 +105,75 @@ export const CaseDetailPage: React.FC = () => {
         )}
       </div>
 
-      {/* Case Header Banner */}
-      <div className="bg-white border border-slate-200 rounded-lg p-5 flex flex-col md:flex-row md:items-center justify-between gap-4 shadow-xs">
-        <div className="space-y-1.5">
-          <div className="flex items-center gap-2.5 flex-wrap">
-            <h1 className="text-lg font-bold text-slate-900 font-mono tracking-tight">{caseData.case_id}</h1>
-            <span className="text-slate-300">•</span>
-            <span className="text-xs font-mono text-slate-600">Order: {caseData.order_id}</span>
-            <DecisionBadge decision={caseData.decision} />
-            <PriorityBadge priority={caseData.priority} />
+      {/* Executive Case Summary Snapshot */}
+      <div className="bg-white border border-slate-200 rounded-lg p-5 shadow-xs space-y-4">
+        <div className="flex flex-col md:flex-row md:items-center justify-between gap-3 pb-3 border-b border-slate-100">
+          <div className="space-y-1">
+            <div className="flex items-center gap-2.5 flex-wrap">
+              <span className="font-mono font-bold text-lg text-slate-900">{caseData.case_id}</span>
+              <span className="text-slate-300">•</span>
+              <span className="text-xs font-mono text-slate-600">Order: {caseData.order_id}</span>
+              <DecisionBadge decision={caseData.decision} />
+              <PriorityBadge priority={caseData.priority} />
+            </div>
+            <div className="text-xs text-slate-500">
+              Exception: <strong className="text-slate-800 font-semibold">{caseData.exception_type.replace(/_/g, " ")}</strong>
+            </div>
           </div>
-          <p className="text-xs text-slate-500">
-            Exception: <strong className="text-slate-700 font-medium">{caseData.exception_type.replace(/_/g, " ")}</strong> •
-            Financial Exposure: <strong className="text-slate-900 font-mono font-medium">{formatINR(caseData.financial_impact)}</strong>
-          </p>
+
+          <div className="flex items-center gap-2">
+            {caseData.decision === "AUTO_RESOLVE" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-medium">
+                <CheckCircle2 className="w-3.5 h-3.5" /> Auto-Resolved Deterministically
+              </span>
+            )}
+            {caseData.decision === "AI_INVESTIGATION" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-indigo-50 text-indigo-700 border border-indigo-200 rounded text-xs font-medium">
+                <Bot className="w-3.5 h-3.5" /> Autonomous AI Investigation
+              </span>
+            )}
+            {caseData.decision === "HUMAN_REVIEW" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-xs font-medium">
+                <UserCheck className="w-3.5 h-3.5" /> Operations Desk Review Required
+              </span>
+            )}
+            {caseData.decision === "ESCALATE" && (
+              <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-xs font-medium">
+                <ShieldAlert className="w-3.5 h-3.5" /> Escalated to Dispute Desk
+              </span>
+            )}
+          </div>
         </div>
 
-        <div>
-          {caseData.decision === "AUTO_RESOLVE" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-emerald-50 text-emerald-700 border border-emerald-200 rounded text-xs font-medium">
-              <CheckCircle2 className="w-3.5 h-3.5" /> Auto-Resolved Deterministically
-            </span>
-          )}
-          {caseData.decision === "ESCALATE" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-rose-50 text-rose-700 border border-rose-200 rounded text-xs font-medium">
-              <ShieldAlert className="w-3.5 h-3.5" /> Escalated to Dispute Desk
-            </span>
-          )}
-          {caseData.decision === "HUMAN_REVIEW" && (
-            <span className="inline-flex items-center gap-1.5 px-3 py-1.5 bg-amber-50 text-amber-700 border border-amber-200 rounded text-xs font-medium">
-              <AlertTriangle className="w-3.5 h-3.5" /> Assigned to Operations Desk
-            </span>
-          )}
+        {/* Financial Exposure & Variance Matrix */}
+        <div className="grid grid-cols-2 sm:grid-cols-4 gap-3 text-xs">
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
+            <span className="text-slate-500 text-[11px]">Expected Order Amount</span>
+            <div className="font-bold text-slate-900 font-mono text-sm mt-0.5">
+              {formatINR(orderAmt)}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
+            <span className="text-slate-500 text-[11px]">Settlement Payout / Amount</span>
+            <div className="font-bold text-slate-900 font-mono text-sm mt-0.5">
+              {settlementAmt > 0 ? formatINR(settlementAmt) : "Pending / None"}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
+            <span className="text-slate-500 text-[11px]">Identified Financial Variance</span>
+            <div className={`font-bold font-mono text-sm mt-0.5 ${varianceAmt > 0 ? "text-rose-700" : "text-emerald-700"}`}>
+              {formatINR(varianceAmt)}
+            </div>
+          </div>
+
+          <div className="p-3 bg-slate-50 border border-slate-200 rounded-md">
+            <span className="text-slate-500 text-[11px]">Control Action Status</span>
+            <div className="font-bold text-slate-800 text-xs mt-0.5">
+              {caseData.requires_human ? "Pending Human Action" : "System Governed"}
+            </div>
+          </div>
         </div>
       </div>
 
@@ -199,12 +247,11 @@ export const CaseDetailPage: React.FC = () => {
                 <div key={p.payment_id} className="space-y-1 text-xs">
                   <div className="text-slate-500 text-[11px]">ID: <span className="font-mono text-slate-800">{p.payment_id}</span></div>
                   <div className="text-slate-500 text-[11px]">Amount: <span className="font-mono font-semibold text-slate-900">{formatINR(p.amount)}</span></div>
-                  <div className="text-slate-500 text-[11px]">UTR: <span className={`font-mono ${isReferenceMismatch ? "text-amber-700 font-bold bg-amber-50 px-1 rounded" : "text-slate-700"}`}>{p.utr || "N/A"}</span></div>
-                  <div className="text-slate-500 text-[11px]">Status: <span className="font-medium text-emerald-700">{p.status || "SUCCESS"}</span></div>
+                  {p.utr && <div className="text-slate-500 text-[11px]">UTR: <span className="font-mono text-slate-700">{p.utr}</span></div>}
                 </div>
               ))
             ) : (
-              <p className="text-xs text-rose-500 italic">Payment record missing from gateway</p>
+              <p className="text-xs text-rose-500 italic">No payment record found</p>
             )}
           </div>
 
@@ -217,21 +264,19 @@ export const CaseDetailPage: React.FC = () => {
               {tx?.settlements && tx.settlements.length > 0 ? (
                 <span className="text-[10px] text-emerald-600 font-mono font-medium">{tx.settlements.length} RECORD</span>
               ) : (
-                <span className="text-[10px] text-amber-600 font-mono font-medium">UNLINKED</span>
+                <span className="text-[10px] text-amber-500 font-mono font-medium">UNSETTLED</span>
               )}
             </div>
             {tx?.settlements && tx.settlements.length > 0 ? (
               tx.settlements.map((s) => (
                 <div key={s.settlement_id} className="space-y-1 text-xs">
                   <div className="text-slate-500 text-[11px]">ID: <span className="font-mono text-slate-800">{s.settlement_id}</span></div>
-                  <div className="text-slate-500 text-[11px]">Gross: <span className="font-mono text-slate-700">{formatINR(s.amount)}</span></div>
-                  <div className="text-slate-500 text-[11px]">Fee/Tax: <span className="font-mono text-slate-600">{formatINR(s.fee + s.tax)}</span></div>
-                  <div className="text-slate-500 text-[11px]">Net Payout: <span className="font-mono font-semibold text-slate-900">{formatINR(s.net_amount)}</span></div>
-                  <div className="text-slate-500 text-[11px]">UTR: <span className={`font-mono ${isReferenceMismatch ? "text-amber-700 font-bold bg-amber-50 px-1 rounded" : "text-slate-700"}`}>{s.utr || "N/A"}</span></div>
+                  <div className="text-slate-500 text-[11px]">Net: <span className="font-mono font-semibold text-slate-900">{formatINR(s.net_amount)}</span></div>
+                  {s.utr && <div className="text-slate-500 text-[11px]">UTR: <span className="font-mono text-slate-700">{s.utr}</span></div>}
                 </div>
               ))
             ) : (
-              <p className="text-xs text-slate-400 italic">Settlement unlinked or pending bank feed</p>
+              <p className="text-xs text-slate-400 italic">No bank payout settlement linked</p>
             )}
           </div>
 
@@ -242,7 +287,7 @@ export const CaseDetailPage: React.FC = () => {
                 <FileCheck className="w-3.5 h-3.5 text-slate-500" /> INVOICE
               </span>
               {tx?.invoice ? (
-                <span className="text-[10px] text-emerald-600 font-mono font-medium">FOUND</span>
+                <span className="text-[10px] text-emerald-600 font-mono font-medium">ISSUED</span>
               ) : (
                 <span className="text-[10px] text-rose-500 font-mono font-medium">MISSING</span>
               )}
@@ -286,14 +331,25 @@ export const CaseDetailPage: React.FC = () => {
         </div>
       </Card>
 
+      {/* AI Boundary & Permissions Panel */}
+      <AIBoundaryPanel />
+
       {/* AI Investigation Workflow (If AI_INVESTIGATION case or already investigated) */}
       {(caseData.decision === "AI_INVESTIGATION" || existingInvestigation) && (
         <InvestigationWorkflow
           caseData={caseData}
           existingInvestigation={existingInvestigation}
-          onInvestigationComplete={(res) => setExistingInvestigation(res)}
+          onInvestigationComplete={(res) => {
+            setExistingInvestigation(res);
+            if (caseId) {
+              api.getAuditTrail(caseId).then(setAuditTrail).catch(() => null);
+            }
+          }}
         />
       )}
+
+      {/* Audit Trail & Financial Control Evidence Timeline */}
+      <AuditTrailTimeline events={auditTrail?.events || []} />
 
       {/* Policy Rationale & Explanation Section */}
       <div className="grid grid-cols-1 md:grid-cols-2 gap-6">

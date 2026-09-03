@@ -145,7 +145,9 @@ export interface InvestigationResponse {
   supporting_payment_ids: string[];
   supporting_settlement_ids: string[];
   supporting_invoice_id: string | null;
-  investigation_status: "COMPLETED" | "INCONCLUSIVE" | "FAILED";
+  investigation_status: "COMPLETED" | "INCONCLUSIVE" | "FAILED" | "RATE_LIMITED" | "PROVIDER_ERROR" | "MALFORMED_RESPONSE" | "ITERATION_LIMIT" | "CONFIGURATION_ERROR" | "TIMEOUT";
+  error_category?: string | null;
+  failure_reason?: string | null;
   tool_trace: ToolCallRecord[];
   provider_used: string;
   created_at: string;
@@ -154,5 +156,36 @@ export interface InvestigationResponse {
 export interface InvestigationListResponse {
   total: number;
   investigations: InvestigationResponse[];
+}
+
+export interface AuditEvent {
+  audit_id: string;
+  case_id: string;
+  actor: string;
+  action: string;
+  source: "DETERMINISTIC" | "AI" | "HUMAN";
+  details_json: Record<string, unknown>;
+  timestamp: string;
+}
+
+export interface CaseAuditTrail {
+  case_id: string;
+  order_id: string;
+  total_events: number;
+  events: AuditEvent[];
+}
+
+export interface BenchmarkMetrics {
+  total_records: number;
+  deterministic_coverage: number;
+  deterministic_correctness: number;
+  classification_accuracy: number;
+  binary_exception_f1: number;
+  payment_linkage_f1: number;
+  settlement_linkage_f1: number;
+  deterministic_throughput_rps: number;
+  total_exposure_identified: number;
+  ai_mock_evaluation_accuracy: number;
+  ai_gemini_sample_summary: string;
 }
 

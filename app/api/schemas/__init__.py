@@ -12,6 +12,7 @@ from app.api.schemas.cases import (
     TransactionChainPayment,
     TransactionChainSettlement,
 )
+from app.api.schemas.audit import AuditEventResponse, CaseAuditTrailResponse
 from app.api.schemas.dashboard import DashboardSummaryResponse
 from app.api.schemas.investigations import (
     InvestigationListResponse,
@@ -36,5 +37,7 @@ __all__ = [
     "ToolCallRecordSchema",
     "InvestigationResponse",
     "InvestigationListResponse",
+    "AuditEventResponse",
+    "CaseAuditTrailResponse",
 ]
 

@@ -3,7 +3,13 @@
 from fastapi import FastAPI
 from fastapi.middleware.cors import CORSMiddleware
 
-from app.api.routes import cases_router, dashboard_router, health_router, investigations_router
+from app.api.routes import (
+    audit_router,
+    cases_router,
+    dashboard_router,
+    health_router,
+    investigations_router,
+)
 from app.database import Base, engine
 import app.models
 
@@ -30,3 +36,4 @@ app.include_router(health_router)
 app.include_router(dashboard_router)
 app.include_router(cases_router)
 app.include_router(investigations_router)
+app.include_router(audit_router)
