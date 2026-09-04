@@ -55,7 +55,7 @@ export const ControllerHealth: React.FC = () => {
             <Database className="w-3.5 h-3.5 text-emerald-600" />
           </div>
           <div className="font-bold text-slate-900 font-mono">ACTIVE</div>
-          <div className="text-[10px] text-slate-500">Immutable / Append-Only</div>
+          <div className="text-[10px] text-slate-500">Append-Only / Read-Only</div>
         </div>
 
         {/* 5. Financial Writes */}

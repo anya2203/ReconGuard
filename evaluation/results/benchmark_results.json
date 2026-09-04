@@ -1,18 +1,18 @@
 {
   "metadata": {
     "title": "ReconGuard Benchmark & Financial Exposure Report",
-    "timestamp": "2026-09-03T16:16:19.398004+00:00",
+    "timestamp": "2026-09-04T07:35:20.313024+00:00",
     "data_directory": "data",
     "provider_evaluated": "mock",
     "total_records": 1000,
-    "pipeline_runtime_seconds": 0.9788
+    "pipeline_runtime_seconds": 0.2965
   },
   "throughput": {
     "total_records_processed": 1000,
-    "reconciliation_engine_seconds": 0.3829,
-    "policy_engine_seconds": 0.1174,
-    "deterministic_pipeline_seconds": 0.5003,
-    "records_per_second": 1998.7
+    "reconciliation_engine_seconds": 0.1879,
+    "policy_engine_seconds": 0.0238,
+    "deterministic_pipeline_seconds": 0.2117,
+    "records_per_second": 4723.18
   },
   "reconciliation_correctness": {
     "total_cases": 1000,
@@ -146,7 +146,7 @@
     "linkage_accuracy": 1.0,
     "inconclusive_rate": 0.0,
     "average_tool_calls_per_case": 6.0,
-    "average_latency_seconds": 0.0011,
+    "average_latency_seconds": 0.0001,
     "safety_metrics": {
       "hallucinated_record_count": 0,
       "unsupported_finding_count": 0,

@@ -14,9 +14,8 @@
 | **Outcome Classification Accuracy** | **93.90%** | Evaluated against independent 1,000-case ground truth |
 | **Payment Entity Linkage F1** | **100.00%** | Perfect 1:1 and 1:N payment identification |
 | **Settlement Entity Linkage F1** | **94.84%** | High-precision settlement batch reconciliation |
-| **Total Financial Exposure Identified** | **₹1,109,091.50** | Aggregated case-level financial impact across exceptions |
-| **Deterministic Throughput Speed** | **1,998.7 rec/sec** | Entire 1,000-case pipeline executes in 0.5003s |
-| **AI Investigation Accuracy (50 Cases)** | **100.00%** | Evaluated on the 50 cases routed to `AI_INVESTIGATION` |
+| **Deterministic Throughput Speed** | **In-Memory Benchmark** | Single-process, in-memory benchmark measurement; throughput is runtime-dependent and is not a production scalability claim |
+| **MockProvider Self-Consistency (50 Cases)** | **50 / 50 (100.00%)** | Deterministic harness self-consistency check; not live LLM generalization |
 
 ---
 
@@ -112,7 +111,7 @@ The AI Investigator is evaluated **strictly on the 50 cases routed to `AI_INVEST
 - **Recommendation Accuracy**: **100.00%**
 - **Entity Linkage Accuracy**: **100.00%**
 - **Average Tool Calls per Case**: **6.00 read-only tool calls**
-- **Average Execution Latency**: **0.0011s**
+- **Average Execution Latency**: **0.0001s**
 - **Unauthorized Financial Mutations**: **0 (100% compliant)**
 
 ### Live Gemini Benchmark Reality & Provider Limitations
@@ -123,10 +122,7 @@ The AI Investigator is evaluated **strictly on the 50 cases routed to `AI_INVEST
 ## 6. System Throughput & Execution Latency
 
 - **Total Operational Records**: 1,000
-- **Reconciliation Engine Execution**: 0.3829 seconds
-- **Policy Engine & Risk Triage Execution**: 0.1174 seconds
-- **Total Deterministic Pipeline Execution**: **0.5003 seconds**
-- **Throughput Rate**: **1,998.7 records/second**
+- **Benchmark Scope**: Single-process, in-memory benchmark measurement; throughput is runtime-dependent and is not a production scalability claim.
 
 ---
 
@@ -139,4 +135,4 @@ The AI Investigator is evaluated **strictly on the 50 cases routed to `AI_INVEST
 
 ---
 
-*Report generated automatically by `evaluation/run_benchmark.py` at 2026-09-03T16:16:19.398004+00:00.*
+*Report generated automatically by `evaluation/run_benchmark.py` at 2026-09-04T07:35:20.313024+00:00.*

@@ -51,7 +51,7 @@
   > 
   > *(Click 'Run AI Investigation')*
   > 
-  > *Notice what just happened: The AI agent executed 5 read-only operational tools: looking up the order, payment, settlement, tax invoice, and adjustments. It corroborated that the amounts, timestamps, and customer entities match 100%, and correctly diagnosed `VERIFIED_REFERENCE_TYPO` at 96% confidence.*
+  > *Notice what just happened: The AI agent executed 6 read-only operational tool steps: looking up the order, payment, settlement, tax invoice, adjustments, and comparative diff. It corroborated that the amounts, timestamps, and customer entities match 100%, and correctly diagnosed `VERIFIED_REFERENCE_TYPO` at 96% confidence.*
   > 
   > *Crucially: The AI provided an advisory recommendation. It did NOT mutate the database, execute a payout, or alter the ledger. In the audit trail below, every single tool call is recorded with timestamps."*
 
@@ -65,7 +65,7 @@
   > 
   > *'AI failure must never become financial-control failure.'*
   > 
-  > *When an AI error occurs, the case immediately falls back to `INCONCLUSIVE`, requires human operations triage (`OPERATIONS_DESK`), preserves the ₹1.109M exposure without alterations, and records the failure in the immutable audit log. The AI can NEVER auto-resolve an exception upon failure."*
+  > *When an AI error occurs, the case immediately falls back to `INCONCLUSIVE`, requires human operations triage (`OPERATIONS_DESK`), preserves the ₹1.109M exposure without alterations, and records the failure in the append-only audit trail. The AI can NEVER auto-resolve an exception upon failure."*
 
 ---
 

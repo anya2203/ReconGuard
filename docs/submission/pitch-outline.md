@@ -17,7 +17,7 @@
 ## 2. Product Architecture & Innovation (0:45 – 2:00)
 
 ### Layer 1: Deterministic Reconciliation Engine
-- Processes **3,000+ records/sec** across 4 specialized matching strategies:
+- Single-process, in-memory benchmark measurement; throughput is runtime-dependent and is not a production scalability claim. Matching occurs across 4 specialized strategies:
   - Exact 1:1 Matcher
   - Duplicate Capture Detector
   - 1:N Aggregation Matcher
@@ -37,7 +37,7 @@
 - **Zero Write Authority**: The AI cannot mutate balances, trigger refunds, or alter ledgers.
 
 ### Layer 4: Append-Only Financial Audit Trail
-- Every transaction lifecycle event, policy classification, AI tool execution, and human desk action is recorded chronologically in an immutable audit timeline.
+- Every transaction lifecycle event, policy classification, AI tool execution, and human desk action is recorded chronologically in an application-level append-only audit timeline.
 
 ---
 
@@ -47,7 +47,7 @@
   $$\text{AI Failure} \longrightarrow \text{INCONCLUSIVE} \longrightarrow \text{OPERATIONS\_DESK Triage} \longrightarrow \text{Zero Financial Mutations}$$
 - **100% Transparent Provider Modes**:
   - `Live Gemini`: Live Google GenAI SDK function calling with real-world quota handling.
-  - `Mock Provider`: Offline deterministic benchmark evaluation.
+  - `Mock Provider`: Offline deterministic regression/self-consistency evaluation.
   - `Demo Replay`: Guaranteed, transparent demonstration mode for judge walkthroughs.
 
 ---

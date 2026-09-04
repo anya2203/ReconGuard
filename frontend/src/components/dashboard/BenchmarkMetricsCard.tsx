@@ -95,13 +95,13 @@ export const BenchmarkMetricsCard: React.FC = () => {
           <span className="text-[10px] text-slate-400">Batch reconciliation precision</span>
         </div>
 
-        {/* Mock AI Finding Accuracy */}
+        {/* Mock AI Self-Consistency */}
         <div className="p-3 bg-indigo-50/40 border border-indigo-200 rounded-md">
-          <span className="text-indigo-800 text-[11px] font-medium">AI Finding Accuracy</span>
+          <span className="text-indigo-800 text-[11px] font-medium">Mock Self-Consistency</span>
           <div className="text-lg font-bold text-indigo-700 font-mono mt-0.5">
             {(metrics.ai_mock_evaluation_accuracy * 100).toFixed(0)}%
           </div>
-          <span className="text-[10px] text-indigo-600">MockProvider (50 cases)</span>
+          <span className="text-[10px] text-indigo-600">MockProvider regression (50/50)</span>
         </div>
       </div>
 

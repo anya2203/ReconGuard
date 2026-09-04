@@ -18,7 +18,7 @@
 ---
 
 ### Q4: Is the AI accuracy really 100%?
-**A**: We make **no general claim of 100% live-AI accuracy**. The 100% finding accuracy metric reported in the benchmark belongs to the deterministic `MockProvider` evaluation across the 50 AI test cases. During live evaluation against Google Gemini Free Tier, 5 completed cases achieved 100% accuracy, but the remaining 45 cases were rate-limited (HTTP 429). This real-world limitation is honestly documented and visible in the dashboard.
+**A**: We make **no general claim of 100% live-AI accuracy**. The 50/50 result is an offline regression and self-consistency check of the deterministic `MockProvider` harness, NOT a measurement of generalized live-LLM reasoning accuracy. During live evaluation against Google Gemini Free Tier, 5 completed cases achieved 100% finding accuracy, while the remaining 45 cases encountered rate limits (HTTP 429) and were safely escalated to human review. This real-world limitation is honestly documented and visible in the dashboard.
 
 ---
 

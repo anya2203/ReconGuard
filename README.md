@@ -21,8 +21,8 @@ While over 80% of transactions match cleanly, the remaining ambiguous exceptions
 **ReconGuard** resolves this tradeoff through a hybrid architecture:
 - **Deterministic Reconciliation**: High-speed, rule-based algorithms resolve clean transactions with mathematical certainty.
 - **Deterministic Policy Engine**: Explicit rules determine whether a discrepancy is safe to auto-resolve, requires evidence collection, or must be escalated immediately.
-- **Read-Only AI Investigator**: Genuinely ambiguous cases are investigated by an autonomous AI agent equipped with 8 strictly read-only tools to corroborate multi-entity evidence chains without write authority.
-- **Human Control & Auditability**: High-risk financial actions remain under human control, with every lifecycle event preserved in an immutable, append-only audit trail.
+- **Read-Only AI Investigator**: Genuinely ambiguous cases are investigated by an agentic, tool-calling AI investigator equipped with 8 strictly read-only tools to corroborate multi-entity evidence chains without write authority.
+- **Human Control & Auditability**: High-risk financial actions remain under human control, with every lifecycle event preserved in an application-level append-only audit trail.
 
 > *"ReconGuard reconciles what can be proven, investigates what is ambiguous, and keeps high-risk financial decisions under policy and human control."*
 
@@ -41,7 +41,7 @@ High-volume payment reconciliation across multiple data feeds presents distinct 
 
 ## The Solution
 
-ReconGuard uses a **deterministic-first, policy-governed** architecture. The AI is not an autonomous actor with ledger access; it is an analytical investigator that gathers operational evidence and presents structured advisory findings.
+ReconGuard uses a **deterministic-first, policy-governed** architecture. The AI is not given write access to financial ledgers; it is an analytical investigator that gathers operational evidence and presents structured advisory findings.
 
 ```mermaid
 flowchart TD
@@ -69,10 +69,10 @@ ReconGuard processes financial transactions through seven distinct stages:
 1. **Operational Records Ingestion**: Ingests structured feeds across orders, payment gateway captures, bank settlement files, tax billing invoices, and adjustment logs.
 2. **Deterministic Reconciliation**: The matching engine executes 4 specialized matching strategies (Exact Match, Duplicate Detection, 1:N Aggregation, and Temporal Levenshtein Fuzzy Matching) to verify data congruence.
 3. **Policy Classification**: The 12-branch Policy Engine evaluates match status, financial exposure, and failed verification checks, assigning each case to one of four definitive decisions: `AUTO_RESOLVE`, `AI_INVESTIGATION`, `HUMAN_REVIEW`, or `ESCALATE`.
-4. **AI Investigation (Eligible Cases Only)**: If routed to `AI_INVESTIGATION`, the autonomous agent queries operational records using 8 read-only tools to evaluate cross-entity linkages (e.g., verifying if amounts, timestamps, and customer IDs match despite a UTR typo).
+4. **AI Investigation (Eligible Cases Only)**: If routed to `AI_INVESTIGATION`, the read-only AI investigator queries operational records using 8 read-only tools to evaluate cross-entity linkages (e.g., verifying if amounts, timestamps, and customer IDs match despite a UTR typo).
 5. **Structured Advisory Recommendation**: The investigator produces a structured finding, a confidence score, a root-cause explanation, and a full tool execution trace. All recommendations explicitly state that no financial records were modified.
 6. **Human Operations Control**: High-risk cases and AI-investigated findings are presented to operations personnel for final review. AI failure or inconclusive evidence automatically defaults to human review.
-7. **Append-Only Audit Trail**: Every reconciliation result, policy decision, AI tool call, and human triage requirement is recorded with ISO 8601 timestamps in an immutable audit timeline.
+7. **Append-Only Audit Trail**: Every reconciliation result, policy decision, AI tool call, and human triage requirement is recorded with ISO 8601 timestamps in an application-level append-only audit timeline.
 
 *AI does not perform exact financial reconciliation. It is invoked only when deterministic rules identify ambiguity.*
 
@@ -80,12 +80,12 @@ ReconGuard processes financial transactions through seven distinct stages:
 
 ## Key Features
 
-1. **Deterministic Matching Engine**: Fast multi-strategy matching engine processing operational feeds straight-through without AI latency or token cost.
+1. **Deterministic Matching Engine**: Fast multi-strategy matching engine processing operational feeds straight-through without AI latency or token cost. Single-process, in-memory benchmark measurement; throughput is runtime-dependent and is not a production scalability claim.
 2. **12-Branch Deterministic Policy Engine**: Classifies exceptions into discrete risk tiers based on monetary impact, exception taxonomy, and verification criteria.
 3. **Read-Only AI Investigator**: Multi-turn tool-calling agent equipped with 8 specific operational query tools to corroborate evidence across tables.
 4. **Evidence-Based Root Cause Diagnosis**: Generates auditable explanations for reference transpositions, rounding differences, and omitted invoice cross-checks.
 5. **Financial Exposure Tracking**: Tracks gross monetary variance across exception queues, maintaining exact parity before and after investigations.
-6. **Append-Only Audit Trail**: Chronological, immutable logging of all system actions, tool arguments, and human review assignments.
+6. **Append-Only Audit Trail**: Chronological, application-level append-only logging of all system actions, tool arguments, and human review assignments.
 7. **Transparent Provider Modes & Fail-Safe Handling**: Supports `Live Gemini` (Google GenAI SDK), `MockProvider` (offline evaluation), and `Demo Replay` (deterministic walkthroughs), with automatic fail-safe human escalation upon API errors.
 
 ---
@@ -148,9 +148,9 @@ ReconGuard was evaluated against an independent ground-truth dataset across 1,00
 
 ## AI Evaluation & Provider Reality
 
-To maintain transparency, the repository clearly delineates offline evaluation from live API execution:
+To maintain transparency, the repository clearly delineates offline self-consistency checks from live API execution:
 
-- **MockProvider (Offline Evaluation)**: Evaluated across all 50 ambiguous discrepancy cases in the benchmark dataset, achieving 100% finding accuracy (50/50) with deterministic, reproducible tool execution.
+- **MockProvider Deterministic Self-Consistency Check — 50/50**: Evaluated across all 50 ambiguous discrepancy cases in the benchmark dataset with deterministic tool execution. *This is an offline regression and self-consistency check of the deterministic MockProvider harness, NOT a measurement of generalized live-LLM reasoning accuracy.*
 - **Live Gemini Provider (`gemini-2.5-flash` / `gemini-3.6-flash`)**: During live evaluation against the Google GenAI API on the 50 AI cases:
   - **5 cases completed** successfully before provider Free Tier quota exhaustion (HTTP 429).
   - All 5 completed cases achieved **100% finding and linkage accuracy**.
@@ -162,7 +162,7 @@ To maintain transparency, the repository clearly delineates offline evaluation f
 
 ## Auditability
 
-Every case in ReconGuard maintains an immutable, chronological audit trail:
+Every case in ReconGuard maintains an application-level append-only chronological audit trail:
 
 - **Reconciliation Events (`RECONCILIATION_COMPLETED`)**: Records the matching engine's status, matched entity IDs, and timestamp.
 - **Policy Events (`POLICY_DECISION`)**: Records the deterministic policy rule applied, assigned risk tier, and explanation.
@@ -195,29 +195,16 @@ If an upstream LLM provider is unavailable or returns unparseable JSON, the syst
 
 ## Testing
 
-ReconGuard includes a comprehensive test suite of **179 automated tests**:
+ReconGuard is verified by an automated test suite of **179 pytest tests** across 8 specialized modules:
 
-```text
-============================== test session starts ==============================
-tests/test_matching.py ................................................... [ 28%]
-tests/test_policy.py ........................                              [ 41%]
-tests/test_investigator.py ...........................................     [ 65%]
-tests/test_api.py ........................                                 [ 79%]
-tests/test_audit.py ............                                           [ 85%]
-tests/test_benchmark.py ...                                               [ 87%]
-tests/test_ai_resilience.py ..........                                     [ 93%]
-tests/test_adversarial.py ............                                     [100%]
-======================== 179 passed, 1 warning in 58.02s ========================
-```
-
-- **Matching Tests (51)**: Unit tests for Exact, Duplicate, Aggregation, and Fuzzy matching algorithms.
-- **Policy Engine Tests (24)**: Verification of all 12 policy decision branches and priority mappings.
-- **Investigator Tests (43)**: Unit tests for all 8 read-only query tools and agent rule synthesis.
-- **API Tests (24)**: Integration tests across dashboard, case explorer, and investigation endpoints.
-- **Audit Trail Tests (12)**: Immutability, chronological ordering, and secret sanitization tests.
-- **Benchmark Tests (3)**: Automated assertions verifying telemetry generation and metric consistency.
-- **AI Resilience Tests (10)**: Verification of rate-limit handling, timeouts, malformed responses, and iteration limits.
-- **Adversarial Red-Team Tests (12)**: Security tests proving zero financial write endpoints, ground-truth isolation, and policy immutability.
+- **Matching Tests (51 tests — `tests/test_matching.py`)**: Unit tests for Exact, Duplicate, Aggregation, and Levenshtein Fuzzy matching algorithms.
+- **Policy Engine Tests (24 tests — `tests/test_policy.py`)**: Verification of all 12 policy decision branches and priority mappings.
+- **Investigator Tests (43 tests — `tests/test_investigator.py`)**: Unit tests for all 8 read-only query tools and agent rule synthesis.
+- **API Tests (24 tests — `tests/test_api.py`)**: Integration tests across dashboard, case explorer, and investigation endpoints.
+- **Audit Trail Tests (12 tests — `tests/test_audit.py`)**: Append-only ordering, event persistence, and secret sanitization tests.
+- **Benchmark Tests (3 tests — `tests/test_benchmark.py`)**: Automated assertions verifying telemetry generation and metric consistency.
+- **AI Resilience Tests (10 tests — `tests/test_ai_resilience.py`)**: Verification of rate-limit handling, timeouts, malformed responses, and iteration limits.
+- **Adversarial Red-Team Tests (12 tests — `tests/test_adversarial.py`)**: Security tests proving zero financial write endpoints, ground-truth isolation, and policy immutability.
 
 ---
 
@@ -371,7 +358,7 @@ A 5-minute judge walkthrough covers:
 
 1. **Executive Dashboard**: Review total volume (1,000 cases), straight-through auto-resolutions (780 cases), and active financial exposure (₹1.109M).
 2. **Clean Deterministic Case (`CASE-000001`)**: Inspect an exact 1:1 match resolved straight-through via `AUTO_RESOLVE` with zero AI tokens used.
-3. **Hero AI Case (`CASE-000921`)**: Run an autonomous investigation on a transposed UTR reference discrepancy (`...12` vs `...21`), inspecting the 5-step read-only tool trace and finding.
+3. **Hero AI Case (`CASE-000921`)**: Run an AI investigation on a transposed UTR reference discrepancy (`...12` vs `...21`), inspecting the 6-step read-only tool trace and finding.
 4. **Fail-Safe Degradation**: Trigger a simulated provider error to verify graceful degradation to `INCONCLUSIVE` and `OPERATIONS_DESK` escalation.
 5. **Benchmark Telemetry & Audit Trail**: Inspect the chronological audit timeline and reproducible benchmark report.
 
