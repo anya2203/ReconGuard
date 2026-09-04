@@ -112,7 +112,7 @@ export const AuditTrailTimeline: React.FC<AuditTrailTimelineProps> = ({
           <h3 className="text-sm font-semibold text-slate-900">Audit Trail & Financial Control Evidence</h3>
         </div>
         <span className="text-xs text-slate-500 font-mono">
-          {events.length} audit event{events.length === 1 ? "" : "s"}
+          {events.length} immutable event{events.length === 1 ? "" : "s"}
         </span>
       </div>
 

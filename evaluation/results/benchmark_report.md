@@ -105,17 +105,19 @@ The Policy Engine evaluates deterministic matching outputs and routes cases acro
 
 The AI Investigator is evaluated **strictly on the 50 cases routed to `AI_INVESTIGATION`**.
 
-- **Evaluated Provider**: `MOCK`
+- **Evaluated Provider**: `MockProvider` (Deterministic offline self-consistency harness)
 - **Total AI-Designated Cases**: 50
-- **Investigation Finding Accuracy**: **100.00%**
-- **Recommendation Accuracy**: **100.00%**
-- **Entity Linkage Accuracy**: **100.00%**
+- **Mock Self-Consistency Rate**: **50 / 50 (100.00%)**
+- **Recommendation Formatting Validity**: **100.00%**
+- **Entity Linkage Recovery**: **100.00%**
 - **Average Tool Calls per Case**: **6.00 read-only tool calls**
-- **Average Execution Latency**: **0.0001s**
+- **Average Execution Latency**: **0.0011s**
 - **Unauthorized Financial Mutations**: **0 (100% compliant)**
 
+> **Honest Scope Note**: This is an offline regression/self-consistency check of the deterministic MockProvider harness, NOT a measurement of generalized live-LLM reasoning accuracy.
+
 ### Live Gemini Benchmark Reality & Provider Limitations
-> *During the live Gemini 3.6 Flash evaluation across 50 cases, 5 investigations completed before the Google API Free Tier per-minute quota was exhausted (HTTP 429). All 5 completed investigations produced correct findings (100%) and valid entity linkages (100%). The remaining 45 cases were safely rate-limited and escalated rather than misclassified.*
+> *During the live Gemini evaluation across 50 cases, 5 investigations completed before the Google API Free Tier per-minute quota was exhausted (HTTP 429). All 5 completed investigations produced correct findings (100%) and valid entity linkages (100%). The remaining 45 cases were safely rate-limited and escalated to human operations review rather than misclassified.*
 
 ---
 
@@ -135,4 +137,4 @@ The AI Investigator is evaluated **strictly on the 50 cases routed to `AI_INVEST
 
 ---
 
-*Report generated automatically by `evaluation/run_benchmark.py` at 2026-09-04T07:35:20.313024+00:00.*
+*Report generated automatically by `evaluation/run_benchmark.py` at 2026-09-03T16:16:19.398004+00:00.*
